@@ -1,0 +1,17 @@
+{
+  "name": "astrolabe-viewer",
+  "version": "1.0.0",
+  "description": "Sensor fusion for the Astrolabe project",
+  "main": "src/server/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Ludovico Di Martino",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^33.0.2"
+  },
+  "dependencies": {
+    "osc": "^2.4.5"
+  }
+}

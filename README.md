@@ -1,7 +1,24 @@
-# Atrolabio project
+# Astrolabio project
 Research training project for the Master's Degree Program in Computer Engineering. The topic of the activity is the design and development of the digital musical instrument based on the astrolabe from the [_Giovanni Poleni_ museum](https://www.musei.unipd.it/it/fisica#) in Padua for the show _Caravanserraglio_.
 
-## Components
+## Project Structure
+```
+Astrolabio project
+│   
+└───Arduino sketches    # the developed sketches for the Arduino board
+│  
+└───puredata patches    # the developed Pure Data patches
+│   │
+│   └───abstractions    # reusable Pure Data Objects for reading the sensor data from the network
+│   │
+│   └───tests           # patches for testing the communication with the Arduino
+│  
+└───sensor fusion       # Electron app for viewing the 3D positioning of the Arduino and sensor
+│
+└─── README.md
+```
+
+## Hardware Components
 For the prototype, the following components were used: 
 
 - [Arduino MKR 1000 WiFi](https://docs.arduino.cc/hardware/mkr-1000-wifi/) 
@@ -10,7 +27,7 @@ For the prototype, the following components were used:
 For the communication between the microcontroller and the sensor, the I<sup>2</sup>C serial communication system was used. Here’s how everything was wired:
 ![image](https://cdn-learn.adafruit.com/assets/assets/000/040/748/large1024/sensors_NXP9DOFBREADBOARD.png?1491841114)
 
-## How to run the code
+## How to run the Arduino code on the board
 1. In the Arduino IDE, go to the board manager and install the package for the board MKR1000.
 2. In the Arduino IDE, go to the library manager and install all the necessary libraries:
     - [WiFi101](https://docs.arduino.cc/libraries/wifi101/)
