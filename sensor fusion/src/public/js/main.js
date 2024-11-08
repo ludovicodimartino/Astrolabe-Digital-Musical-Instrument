@@ -2,8 +2,10 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 const { ipcRenderer } = require('electron') 
+import { showErrorMessage } from './messages.js'
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const canvas = document.getElementById("threeCanvas");
+const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -104,3 +106,7 @@ const animate = () => {
 }
 animate();
 
+ipcRenderer.on("ctrlMsg", (event, data) => {
+  console.log(data);
+  showErrorMessage(data.msg, data.type);
+})

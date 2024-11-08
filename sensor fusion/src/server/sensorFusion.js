@@ -1,6 +1,6 @@
 
 // Timestamp of the last data reception
-let lastRecivedDataTS = Date.now(); 
+let lastReceivedDataTS = Date.now(); 
 
 // Complementary filter variables initialization
 let angleX = 0, angleY = 0, angleZ = 0;
@@ -36,8 +36,8 @@ function calculateRotation(sensorData) {
     const magYaw = calculateYaw(mag);
 
     // Update time interval
-    const dt = (Date.now() - lastRecivedDataTS) / 1000;
-    lastRecivedDataTS = Date.now();
+    const dt = (Date.now() - lastReceivedDataTS) / 1000;
+    lastReceivedDataTS = Date.now();
 
     angleX = complementaryFilter(accPitch, gyro.x, dt, angleX);
     angleY = complementaryFilter(accRoll, gyro.y, dt, angleY);
