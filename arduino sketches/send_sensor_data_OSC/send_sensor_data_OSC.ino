@@ -12,6 +12,16 @@
 // Libraries with the secrets
 #include "arduino_secrets.h"
 
+// #define DEBUG
+
+#ifdef DEBUG 
+#define DEBUGPRINTLN Serial.println
+#define DEBUGPRINT Serial.print
+#else 
+#define DEBUGPRINTLN // debug
+#define DEBUGPRINT // debug
+#endif
+
 
 Adafruit_FXOS8700 accelmag = Adafruit_FXOS8700(0x8700A, 0x8700B);       // assign a unique ID to the accelerometer and magnetometer for the I2C
 Adafruit_FXAS21002C gyro = Adafruit_FXAS21002C(0x0021002C);             // assign a unique ID to the gyroscope for the I2C
@@ -20,15 +30,21 @@ char ssid[] = SECRET_SSID;       // network SSID (name)
 char pass[] = SECRET_PASS;       // network password (use for WPA, or use as key for WEP)
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
-WiFiUDP Udp;                                // A UDP instance to send and receive packets over UDP
-const IPAddress multicastAddress(225,0,0,1);   // multicast address
-const unsigned int remotePort = 9999;       // remote port to send OSC
-const unsigned int localPort = 8888;        // local port to listen for OSC packets
+WiFiUDP Udp;                                 // A UDP instance to send and receive packets over UDP
+const IPAddress multicastAddress(225,0,0,1); // multicast address
+const unsigned int remotePort = 9999;        // remote port to send OSC
+const unsigned int localPort = 8888;         // local port to listen for OSC packets
 
 const unsigned short sendFrequency = 10;     // number of message to send every second
 
+unsigned long previousMillis = 0;            // last time the connection status was checked
+unsigned long interval = 5000;               // the interval between two connection checks
+
+unsigned short connectionLostFlag = 0;       //flag that signals if in the previous loop the cannection was lost
 
 void setup() {
+
+#ifdef DEBUG
   //Serial monitor setup
   Serial.begin(9600);
 
@@ -36,58 +52,82 @@ void setup() {
   while (!Serial) {
     delay(1);
   }
+#endif
 
   // accelerometer and magnetometer initialization
   if (!accelmag.begin()) {
     // There was a problem detecting the FXOS8700
-    Serial.println("No FXOS8700 detected ... Check your wiring!");
+    DEBUGPRINTLN("No FXOS8700 detected ... Check your wiring!");
     while (1);
   }
 
   // gyroscope initialization
   if (!gyro.begin()) {
     // there was a problem detecting the FXAS21002C
-    Serial.println("No FXAS21002C detected ... Check your wiring!");
+    DEBUGPRINTLN("No FXAS21002C detected ... Check your wiring!");
     while (1);
   }
 
+#ifdef DEBUG
   // print sensor data
   displaySensorDetails();
+#endif
 
   // network connection
-  Serial.print("Attempting to connect to network: ");
-  Serial.println(ssid);
+  DEBUGPRINT("Attempting to connect to network: ");
+  DEBUGPRINTLN(ssid);
   
   // Connect to WPA/WPA2 network
-  status = WiFi.begin(ssid, pass);
-  Serial.println("Connecting...");
-
-  // attempt to connect to Wifi network
+  DEBUGPRINTLN("Connecting...");
   while (status != WL_CONNECTED) {
-    Serial.println(".");
+    status = WiFi.begin(ssid, pass);
+    DEBUGPRINTLN(".");
     delay(100);
   }
 
   // Connection succeeded
-  Serial.println("Connection succeeded!");
-  Serial.println("----------------------------------------");
+  DEBUGPRINTLN("Connection succeeded!");
+  DEBUGPRINTLN("----------------------------------------");
+#ifdef DEBUG
   printWifiData();
-  Serial.println("----------------------------------------");
+#endif
+  DEBUGPRINTLN("----------------------------------------");
 
   // Initializing the UDP
-  Serial.println("Starting UDP...");
+  DEBUGPRINTLN("Starting UDP...");
   Udp.begin(localPort);
-  Serial.print("Local port: ");
-  Serial.println(localPort);
-  Serial.println("----------------------------------------");
-  Serial.println("");
-  Serial.print("Sending data to: ");
-  Serial.print(multicastAddress);
-  Serial.print(":");
-  Serial.println(remotePort);
+  DEBUGPRINT("Local port: ");
+  DEBUGPRINTLN(localPort);
+  DEBUGPRINTLN("----------------------------------------");
+  DEBUGPRINTLN("");
+  DEBUGPRINT("Sending data to: ");
+  DEBUGPRINT(multicastAddress);
+  DEBUGPRINT(":");
+  DEBUGPRINTLN(remotePort);
 }
 
 void loop() {
+
+  // Manage connection lost
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+    if(WiFi.status() != WL_CONNECTED){
+      DEBUGPRINTLN("Connection lost. Reconnecting...");
+      connectionLostFlag = 1; // Signal that the connection was lost
+      WiFi.begin(ssid, pass);
+      interval = 100; // Retry often, until you are connected again
+      return; // Don't go on if the connection is lost
+    } else {
+      if(connectionLostFlag){
+        DEBUGPRINTLN("Back online");
+        connectionLostFlag = 0;
+        Udp.begin(localPort);
+      }
+      interval = 5000;
+    }
+  }
+  
   sensors_event_t aevent, mevent, gevent;
 
   // get new sensors event
@@ -120,6 +160,7 @@ void loop() {
   delay(1000/sendFrequency); // send every 1000/sendFrequancy ms
 }
 
+#ifdef DEBUG
 void printWifiData() {
   Serial.println("Board WiFi Information:");
   // print the board's IP address
@@ -215,3 +256,4 @@ void displaySensorDetails(void) {
   Serial.println("");
   delay(500);
 }
+#endif
