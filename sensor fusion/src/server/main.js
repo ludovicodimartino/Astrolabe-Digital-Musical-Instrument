@@ -19,11 +19,11 @@ const createWindow = () => {
     mainWindow.loadFile("./src/public/index.html")
 }
 
-const udpOscListener = new UdpOscListen();
+const udpOscListener = new UdpOscListen("192.168.43.238");
 
 udpOscListener.on("OSCMessageReceived", (msg) => {
     const calculatedRotation = calculateRotation(msg);
-    console.log(calculatedRotation);
+    // console.log(calculatedRotation);
     mainWindow.webContents.send("rotation:data", calculatedRotation);
 })
 

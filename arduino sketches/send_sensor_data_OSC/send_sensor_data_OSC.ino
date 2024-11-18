@@ -21,7 +21,7 @@ char pass[] = SECRET_PASS;       // network password (use for WPA, or use as key
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
 WiFiUDP Udp;                                // A UDP instance to send and receive packets over UDP
-const IPAddress remoteIP(192,168,43,238);   // remote IP of the receiving computer
+const IPAddress multicastAddress(225,0,0,1);   // multicast address
 const unsigned int remotePort = 9999;       // remote port to send OSC
 const unsigned int localPort = 8888;        // local port to listen for OSC packets
 
@@ -82,7 +82,7 @@ void setup() {
   Serial.println("----------------------------------------");
   Serial.println("");
   Serial.print("Sending data to: ");
-  Serial.print(remoteIP);
+  Serial.print(multicastAddress);
   Serial.print(":");
   Serial.println(remotePort);
 }
@@ -113,7 +113,7 @@ void loop() {
   bundle.add("/gyro/z").add(gevent.gyro.z);
 
   // send the message
-  Udp.beginPacket(remoteIP, remotePort);
+  Udp.beginPacket(multicastAddress, remotePort);
   bundle.send(Udp);
   Udp.endPacket();
   bundle.empty();

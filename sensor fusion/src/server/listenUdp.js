@@ -1,4 +1,5 @@
 const dgram = require('node:dgram');
+const os = require('os');
 const server = dgram.createSocket('udp4');
 const osc = require('osc');
 
@@ -12,7 +13,7 @@ const osc = require('osc');
  * @extends osc.UDPPort
  * @author Ludovico Di Martino
  * @example
- * const listener = new UdpOscListen(9999);
+ * const listener = new UdpOscListen("192.168.43.238", 9999);
  * listener.on("timeout", (msg) => console.log(msg));
  * listener.on("newDataComing", () => console.log("Data is coming in"));
  * listener.init();
@@ -29,11 +30,15 @@ class UdpOscListen extends osc.UDPPort {
   /**
    * Constructs a UdpOscListen instance listening on the specified port.
    * @constructor
+   * @param {String} localAddress - The interface local address on which you want to listen.
    * @param {number} [port=9999] - The port to listen for incoming OSC messages.
    */
-  constructor(port = 9999) {
+  constructor(localAddress, port = 9999) {
     super({
-      localAddress: "0.0.0.0",
+      localAddress: localAddress,
+      multicastMembership: [{address: "225.0.0.1", 
+        interface: localAddress
+      }],
       localPort: port
     });
   }
