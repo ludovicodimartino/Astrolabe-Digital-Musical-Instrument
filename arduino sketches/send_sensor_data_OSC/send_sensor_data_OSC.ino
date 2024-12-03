@@ -23,24 +23,59 @@
 #endif
 
 
-Adafruit_FXOS8700 accelmag = Adafruit_FXOS8700(0x8700A, 0x8700B);       // assign a unique ID to the accelerometer and magnetometer for the I2C
-Adafruit_FXAS21002C gyro = Adafruit_FXAS21002C(0x0021002C);             // assign a unique ID to the gyroscope for the I2C
+Adafruit_FXOS8700 accelmag = Adafruit_FXOS8700(0x8700A, 0x8700B);       // assign a unique ID to the accelerometer and magnetometer for the I2C.
+Adafruit_FXAS21002C gyro = Adafruit_FXAS21002C(0x0021002C);             // assign a unique ID to the gyroscope for the I2C.
 
-char ssid[] = SECRET_SSID;       // network SSID (name)
-char pass[] = SECRET_PASS;       // network password (use for WPA, or use as key for WEP)
-int status = WL_IDLE_STATUS;     // the Wifi radio's status
+char ssid[] = SECRET_SSID;       // network SSID (name).
+char pass[] = SECRET_PASS;       // network password (use for WPA, or use as key for WEP).
+int status = WL_IDLE_STATUS;     // the Wifi radio's status.
 
-WiFiUDP Udp;                                 // A UDP instance to send and receive packets over UDP
-const IPAddress multicastAddress(225,0,0,1); // multicast address
-const unsigned int remotePort = 9999;        // remote port to send OSC
-const unsigned int localPort = 8888;         // local port to listen for OSC packets
+WiFiUDP Udp;                                 // A UDP instance to send and receive packets over UDP.
+const IPAddress multicastAddress(225,0,0,1); // multicast address.
+const unsigned int remotePort = 9999;        // remote port to send OSC.
+const unsigned int localPort = 8888;         // local port to listen for OSC packets.
 
-const unsigned short sendFrequency = 10;     // number of message to send every second
+const unsigned short sendFrequency = 10;     // number of message to send every second.
 
-unsigned long previousMillis = 0;            // last time the connection status was checked
-unsigned long interval = 5000;               // the interval between two connection checks
+unsigned long previousMillis = 0;            // last time the connection status was checked.
+unsigned long interval = 5000;               // the interval between two connection checks.
+unsigned short connectionLostFlag = 0;       // flag that signals if in the previous loop the cannection was lost.
+unsigned int retrialCount = 0;               // number of time the Arduino tried to connect to the wifi.
+pin_size_t wifiLed = LED_BUILTIN;            // the led used to signal the WiFi status.
+PinStatus wifiLedStatus = LOW;               // the WiFi led status.
 
-unsigned short connectionLostFlag = 0;       //flag that signals if in the previous loop the cannection was lost
+/**
+* This function performs the operations that should be done after the connection is acquired.
+*/
+void connectionSuccessful(){
+  // Signaling the connection with the led
+  wifiLedStatus = HIGH;
+  retrialCount = 0;
+  digitalWrite(wifiLed, HIGH);
+
+  // Reset the connection lost flag
+  connectionLostFlag = 0;
+
+  // Connection succeeded
+  DEBUGPRINTLN("Connection succeeded!");
+  DEBUGPRINTLN("----------------------------------------");
+#ifdef DEBUG
+  printWifiData();
+#endif
+  DEBUGPRINTLN("----------------------------------------");
+
+  // Initializing the UDP
+  DEBUGPRINTLN("Starting UDP...");
+  Udp.begin(localPort);
+  DEBUGPRINT("Local port: ");
+  DEBUGPRINTLN(localPort);
+  DEBUGPRINTLN("----------------------------------------");
+  DEBUGPRINTLN("");
+  DEBUGPRINT("Sending data to: ");
+  DEBUGPRINT(multicastAddress);
+  DEBUGPRINT(":");
+  DEBUGPRINTLN(remotePort);
+}
 
 void setup() {
 
@@ -68,6 +103,9 @@ void setup() {
     while (1);
   }
 
+  // Wifi-led init
+  pinMode(wifiLed, OUTPUT);
+
 #ifdef DEBUG
   // print sensor data
   displaySensorDetails();
@@ -79,31 +117,19 @@ void setup() {
   
   // Connect to WPA/WPA2 network
   DEBUGPRINTLN("Connecting...");
+  
   while (status != WL_CONNECTED) {
     status = WiFi.begin(ssid, pass);
+    if(++retrialCount%5){
+      wifiLedStatus = (wifiLedStatus == HIGH) ? LOW : HIGH;
+      digitalWrite(wifiLed, wifiLedStatus);
+    } 
     DEBUGPRINTLN(".");
     delay(100);
   }
 
-  // Connection succeeded
-  DEBUGPRINTLN("Connection succeeded!");
-  DEBUGPRINTLN("----------------------------------------");
-#ifdef DEBUG
-  printWifiData();
-#endif
-  DEBUGPRINTLN("----------------------------------------");
-
-  // Initializing the UDP
-  DEBUGPRINTLN("Starting UDP...");
-  Udp.begin(localPort);
-  DEBUGPRINT("Local port: ");
-  DEBUGPRINTLN(localPort);
-  DEBUGPRINTLN("----------------------------------------");
-  DEBUGPRINTLN("");
-  DEBUGPRINT("Sending data to: ");
-  DEBUGPRINT(multicastAddress);
-  DEBUGPRINT(":");
-  DEBUGPRINTLN(remotePort);
+  connectionSuccessful();
+  
 }
 
 void loop() {
@@ -113,16 +139,19 @@ void loop() {
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     if(WiFi.status() != WL_CONNECTED){
-      DEBUGPRINTLN("Connection lost. Reconnecting...");
       connectionLostFlag = 1; // Signal that the connection was lost
       WiFi.begin(ssid, pass);
+      if(++retrialCount%5){
+        DEBUGPRINTLN("Connection lost. Reconnecting...");
+        wifiLedStatus = (wifiLedStatus == HIGH) ? LOW : HIGH;
+        digitalWrite(wifiLed, wifiLedStatus);
+      } 
       interval = 100; // Retry often, until you are connected again
       return; // Don't go on if the connection is lost
     } else {
       if(connectionLostFlag){
         DEBUGPRINTLN("Back online");
-        connectionLostFlag = 0;
-        Udp.begin(localPort);
+        connectionSuccessful();
       }
       interval = 5000;
     }
