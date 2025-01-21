@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include <WiFi101.h>
+#include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <OSCBundle.h>
 
@@ -28,34 +28,22 @@ Adafruit_FXAS21002C gyro = Adafruit_FXAS21002C(0x0021002C);             // assig
 
 char ssid[] = SECRET_SSID;       // network SSID (name).
 char pass[] = SECRET_PASS;       // network password (use for WPA, or use as key for WEP).
-int status = WL_IDLE_STATUS;     // the Wifi radio's status.
 
 WiFiUDP Udp;                                 // A UDP instance to send and receive packets over UDP.
 const IPAddress multicastAddress(225,0,0,1); // multicast address.
 const unsigned int remotePort = 9999;        // remote port to send OSC.
 const unsigned int localPort = 8888;         // local port to listen for OSC packets.
 
-const unsigned short sendFrequency = 50;     // number of message to send every second.
+const unsigned short sendFrequency = 10;     // number of message to send every second.
 
-unsigned long previousMillis = 0;            // last time the connection status was checked.
-unsigned long interval = 5000;               // the interval between two connection checks.
-unsigned short connectionLostFlag = 0;       // flag that signals if in the previous loop the cannection was lost.
-unsigned int retrialCount = 0;               // number of time the Arduino tried to connect to the wifi.
-pin_size_t wifiLed = LED_BUILTIN;            // the led used to signal the WiFi status.
-PinStatus wifiLedStatus = LOW;               // the WiFi led status.
+#ifdef DEBUG 
+unsigned long previousMillis = 0;            // last time the WifiCheck was done.
+#endif
 
 /**
 * This function performs the operations that should be done after the connection is acquired.
 */
 void connectionSuccessful(){
-  // Signaling the connection with the led
-  wifiLedStatus = HIGH;
-  retrialCount = 0;
-  digitalWrite(wifiLed, HIGH);
-
-  // Reset the connection lost flag
-  connectionLostFlag = 0;
-
   // Connection succeeded
   DEBUGPRINTLN("Connection succeeded!");
   DEBUGPRINTLN("----------------------------------------");
@@ -89,22 +77,22 @@ void setup() {
   }
 #endif
 
+  // I2C communication pins: set GPIO2 for SDA and GPIO0 for SCL
+  Wire.begin(2,0);
+
   // accelerometer and magnetometer initialization
   if (!accelmag.begin()) {
     // There was a problem detecting the FXOS8700
     DEBUGPRINTLN("No FXOS8700 detected ... Check your wiring!");
-    while (1);
+    ESP.deepSleep(0);
   }
 
   // gyroscope initialization
   if (!gyro.begin()) {
     // there was a problem detecting the FXAS21002C
     DEBUGPRINTLN("No FXAS21002C detected ... Check your wiring!");
-    while (1);
+    ESP.deepSleep(0);
   }
-
-  // Wifi-led init
-  pinMode(wifiLed, OUTPUT);
 
 #ifdef DEBUG
   // print sensor data
@@ -117,46 +105,37 @@ void setup() {
   
   // Connect to WPA/WPA2 network
   DEBUGPRINTLN("Connecting...");
-  
-  while (status != WL_CONNECTED) {
-    status = WiFi.begin(ssid, pass);
-    if(++retrialCount%5){
-      wifiLedStatus = (wifiLedStatus == HIGH) ? LOW : HIGH;
-      digitalWrite(wifiLed, wifiLedStatus);
-    } 
-    DEBUGPRINTLN(".");
-    delay(100);
-  }
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, pass);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
 
+  while (WiFi.status() != WL_CONNECTED) {
+    DEBUGPRINTLN(".");
+    delay(1000);
+  }
   connectionSuccessful();
-  
 }
 
 void loop() {
-
-  // Manage connection lost
+#ifdef DEBUG
+  // Debug for the WiFi connection
   unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    if(WiFi.status() != WL_CONNECTED){
-      connectionLostFlag = 1; // Signal that the connection was lost
-      WiFi.begin(ssid, pass);
-      if(++retrialCount%5){
-        DEBUGPRINTLN("Connection lost. Reconnecting...");
-        wifiLedStatus = (wifiLedStatus == HIGH) ? LOW : HIGH;
-        digitalWrite(wifiLed, wifiLedStatus);
-      } 
-      interval = 100; // Retry often, until you are connected again
-      return; // Don't go on if the connection is lost
-    } else {
-      if(connectionLostFlag){
-        DEBUGPRINTLN("Back online");
-        connectionSuccessful();
-      }
-      interval = 5000;
+  if (currentMillis - previousMillis >= 30000){
+    switch (WiFi.status()){
+        case WL_NO_SSID_AVAIL:
+          DEBUGPRINTLN("Configured SSID cannot be reached");
+          break;
+        case WL_CONNECTED:
+          DEBUGPRINTLN("Connection successfully established");
+          break;
+        case WL_CONNECT_FAILED:
+          DEBUGPRINTLN("Connection failed");
+          break;
     }
+    previousMillis = currentMillis;
   }
-  
+#endif
   sensors_event_t aevent, mevent, gevent;
 
   // get new sensors event
@@ -206,11 +185,6 @@ void printWifiData() {
   long rssi = WiFi.RSSI();
   Serial.print("signal strength (RSSI): ");
   Serial.println(rssi);
-
-  byte encryption = WiFi.encryptionType();
-  Serial.print("Encryption Type: ");
-  Serial.println(encryption, HEX);
-  Serial.println();
 }
 
 void displaySensorDetails(void) {
