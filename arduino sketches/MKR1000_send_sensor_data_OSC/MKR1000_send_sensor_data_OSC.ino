@@ -2,12 +2,12 @@
 #include <WiFi101.h>
 #include <WiFiUdp.h>
 #include <OSCBundle.h>
+#include <Wire.h>
 
 // Sensor libraries
 #include <Adafruit_FXAS21002C.h>
 #include <Adafruit_FXOS8700.h>
 #include <Adafruit_Sensor.h>
-#include <Wire.h>
 
 // Libraries with the secrets
 #include "arduino_secrets.h"
@@ -88,6 +88,8 @@ void setup() {
     delay(1);
   }
 #endif
+
+  // Wire.begin(A4,A5);
 
   // accelerometer and magnetometer initialization
   if (!accelmag.begin()) {
