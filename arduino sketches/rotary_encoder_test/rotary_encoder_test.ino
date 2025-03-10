@@ -28,7 +28,7 @@
 #define DT_B_PIN 16
 #define CLK_A_PIN 5
 #define CLK_B_PIN 17
-#define SW_PIN 21
+#define SW_PIN 18
 #define WIFI_LED_PIN 2  // pin for the led signaling the status of the wifi
 
 int numA = 0;
@@ -36,7 +36,6 @@ int numB = 0;
 
 char ssid[] = SECRET_SSID;    // network SSID (name).
 char pass[] = SECRET_PASS;    // network pass (use for WPA, or use as key for WEP).
-int status = WL_IDLE_STATUS;  // the Wifi radio's status.
 
 WiFiUDP Udp;                                  // A UDP instance to send and receive packets over UDP.
 const IPAddress remoteIP(192, 168, 43, 238);  // remote IP address.
@@ -385,6 +384,8 @@ void loop() {
   // uint8_t dt_A = digitalRead(DT_A_PIN);
   uint8_t sw = digitalRead(SW_PIN);
   if (sw == LOW) {
+    numA=0;
+    numB=0;
     OSCMessage msg("/reset");
     Udp.beginPacket(remoteIP, remotePort);
     msg.send(Udp);
