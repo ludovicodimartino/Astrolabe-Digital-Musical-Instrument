@@ -25,8 +25,9 @@ class UdpOscListen extends osc.UDPPort {
   #timeoutHandler = (msg) => {};
   #newDataComingHandler = () => {};
   #errorHandler = (msg) => {}; 
-  #OSCMsgReceivedHandler = (msg) => {};
-
+  #OSCBundleReceivedHandler = (msg) => {};
+  #OSCMessageReceivedHandler = (msg) => {};
+  
   /**
    * Constructs a UdpOscListen instance listening on the specified port.
    * @constructor
@@ -45,21 +46,33 @@ class UdpOscListen extends osc.UDPPort {
 
   /**
    * Initializes the listener, setting up a timeout mechanism and beginning
-   * to listen for OSC message bundles.
+   * to listen for OSC message bundles and simple messages.
    * If an error occurs during parsing, the errorHandler is invoked.
    * If a valid OSC message is received, the OSCMsgReceivedHandler is invoked.
    */
   init() {
     this.#resetTimeout();
+
+    // When a bundle is received
     this.on("bundle", (bundle) => {
       this.#resetTimeout();
       try {
-        this.#OSCMsgReceivedHandler(this.#parseOSCMessage(bundle.packets));
+        this.#OSCBundleReceivedHandler(bundle.packets);
       } catch (e) {
-        this.#errorHandler("Received corrupted OSC message!");
+        this.#errorHandler("Received corrupted OSC IMU message!");
       }
     });
 
+    // When a simple message is received
+    this.on("message", (msg) => {
+      this.#resetTimeout();
+      try {
+        this.#OSCMessageReceivedHandler(msg);
+      } catch (e) {
+        this.#errorHandler("Received corrupted OSC Encoder message!");
+      }
+    });
+    
     // Start UDP listening
     this.open();
   }
@@ -83,29 +96,10 @@ class UdpOscListen extends osc.UDPPort {
   }
 
   /**
-   * Parses incoming OSC messages, expecting a specific 9-element format for accelerometer,
-   * magnetometer, and gyroscope data. Throws an error if the message does not match
-   * the expected format.
-   * 
-   * @private
-   * @param {Array} msg - The incoming OSC message array.
-   * @returns {Object} Parsed message data containing acc, mag, and gyro data objects.
-   * @throws {Error} If the message does not contain exactly 9 elements.
-   */
-  #parseOSCMessage(msg) {
-    if (msg.length !== 9) throw new Error("Illegal Arguments");
-    return {
-      acc: { x: msg[0].args[0], y: msg[1].args[0], z: msg[2].args[0] },
-      mag: { x: msg[3].args[0], y: msg[4].args[0], z: msg[5].args[0] },
-      gyro: { x: msg[6].args[0], y: msg[7].args[0], z: msg[8].args[0] }
-    };
-  }
-
-  /**
    * Sets custom event handlers for specific events.
    *
    * @param {string} eventName - The name of the event. Possible values:
-   *                             'timeout', 'newDataComing', 'OSCMessageReceived', 'listenError'.
+   *                             'timeout', 'newDataComing', 'OSC_IMUMessageReceived', 'listenError', 'OSC_ENCMessageReceived'.
    * @param {Function} handler - The callback function to handle the event.
    */
   on(eventName, handler) {
@@ -116,8 +110,11 @@ class UdpOscListen extends osc.UDPPort {
       case 'newDataComing':
         this.#newDataComingHandler = handler;
         break;
+      case 'OSCBundleReceived':
+        this.#OSCBundleReceivedHandler = handler;
+        break;
       case 'OSCMessageReceived':
-        this.#OSCMsgReceivedHandler = handler;
+        this.#OSCMessageReceivedHandler = handler;
         break;
       case 'listenError':
         this.#errorHandler = handler;

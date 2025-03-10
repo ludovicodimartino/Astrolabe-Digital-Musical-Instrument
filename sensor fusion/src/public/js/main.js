@@ -56,35 +56,74 @@ spotLight.castShadow = true;
 spotLight.shadow.bias = -0.0001;
 scene.add(spotLight);
 
-// Load the model
-let mesh; // mash variable
-const loader = new GLTFLoader().setPath('./models_test/millennium_falcon/');
-loader.load('scene.gltf', (gltf) => {
-  console.log('loading model');
-  mesh = gltf.scene;
+// Group to hold models
+const modelGroup = new THREE.Group();
+scene.add(modelGroup);
 
-  mesh.traverse((child) => {
-    if (child.isMesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
+// Define the filenames of the models
+const modelsFileNames = ['madre_timpano_bullone.glb', 'rete.glb', 'alidada.glb'];
+const modelMeshes = {};
+
+// GLTF Loader with model-loading function
+const loader = new GLTFLoader().setPath('./models_test/');
+const loadModel = (fileName) => {
+  loader.load(
+    fileName,
+    (gltf) => {
+      console.log(`Model loaded: ${fileName}`);
+      modelMeshes[fileName] = gltf.scene;
+
+      // Enable shadows for meshes
+      modelMeshes[fileName].traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      // Add model to the group
+      modelGroup.add(modelMeshes[fileName]);
+    },
+    (xhr) => {
+      console.log(`Loading progress (${fileName}): ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
+    },
+    (error) => {
+      console.error(`Error loading ${fileName}:`, error);
     }
-  });
+  );
+};
 
-  mesh.position.set(0, 1.05, -1);
-  scene.add(mesh);
+// Load models
+modelsFileNames.forEach(loadModel);
 
-  // receives the sensor data from the backend and modifies the model orientation
-  ipcRenderer.on("rotation:data", (event, data) => {
-    console.log(data);
-    updateModelRotation(data);
-  })
-
-//   document.getElementById('progress-container').style.display = 'none';
-}, (xhr) => {
-  console.log(`loading ${xhr.loaded / xhr.total * 100}%`);
-}, (error) => {
-  console.error(error);
+// Update group rotation with IMU sensor data
+ipcRenderer.on('rotation:data', (event, data) => {
+  console.log('Sensor Data:', data);
+  modelGroup.rotation.set(-data.angleY, data.angleZ, data.angleX);
 });
+
+// Update alidada rotation with rotary encoder data
+ipcRenderer.on('alidada:data', (event, data) => {
+  console.log('Encoder Data Alidada:', data);
+  modelMeshes['alidada.glb'].rotation.y = -(data%30) * (Math.PI / 15);
+});
+
+// Update rete rotation with rotary encoder data
+ipcRenderer.on('rete:data', (event, data) => {
+  console.log('Encoder Data rete:', data);
+  modelMeshes['rete.glb'].rotation.y = -(data%30) * (Math.PI / 15);
+});
+
+// Reset rotation with rotary encoder data
+ipcRenderer.on('reset', (event, data) => {
+  console.log('Reset received');
+  modelMeshes['alidada.glb'].rotation.y = 0;
+  modelMeshes['rete.glb'].rotation.y = 0;
+});
+
+// Base transformation for the group
+modelGroup.position.set(0, 1, 0);
+modelGroup.scale.set(25, 25, 25);
 
 // Window resizing
 window.addEventListener('resize', () => {
@@ -93,9 +132,9 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// updates the rotation of the model based on the received data
-const updateModelRotation = (rotationData) => {
-    mesh.rotation.set(-rotationData.angleY, rotationData.angleZ, rotationData.angleX);
+// Updates the rotation of the model based on the received data
+const updateGroupRotation = (rotationData) => {
+    group.rotation.set(-rotationData.angleY, rotationData.angleZ, rotationData.angleX);
 }
 
 // Animate function
