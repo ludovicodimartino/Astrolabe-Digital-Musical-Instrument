@@ -35,9 +35,10 @@ class UdpOscListen extends osc.UDPPort {
    * @param {number} [port=9999] - The port to listen for incoming OSC messages.
    */
   constructor(localAddress, port = 9999) {
+    if(localAddress === null) throw new Error("Invalid local address.");
     super({
       localAddress: localAddress,
-      multicastMembership: [{address: "225.0.0.1", 
+      multicastMembership: [{address: "239.255.0.1", 
         interface: localAddress
       }],
       localPort: port
@@ -45,10 +46,11 @@ class UdpOscListen extends osc.UDPPort {
   }
 
   /**
-   * Initializes the listener, setting up a timeout mechanism and beginning
+   * Initializes the UDP listener, setting up a timeout mechanism and beginning
    * to listen for OSC message bundles and simple messages.
-   * If an error occurs during parsing, the errorHandler is invoked.
-   * If a valid OSC message is received, the OSCMsgReceivedHandler is invoked.
+   * - If an error occurs during parsing, the ```errorHandler``` is invoked.
+   * - If a OSC message is received, the ```OSCMessageReceivedHandler``` is invoked.
+   * - If an OSC bundle is received, the ```OSCBundleReceivedHandler``` is invoked.
    */
   init() {
     this.#resetTimeout();
@@ -80,7 +82,7 @@ class UdpOscListen extends osc.UDPPort {
   /**
    * Resets the timeout for incoming data. If no data is received within the specified
    * timeout period, the timeoutHandler is invoked with a "No data coming from the sensor" message.
-   * If data is received before the timeout, the newDataComingHandler is invoked.
+   * If data is received before the timeout, the ```newDataComingHandler``` is invoked.
    * @private
    */
   #resetTimeout() {
@@ -99,7 +101,7 @@ class UdpOscListen extends osc.UDPPort {
    * Sets custom event handlers for specific events.
    *
    * @param {string} eventName - The name of the event. Possible values:
-   *                             'timeout', 'newDataComing', 'OSC_IMUMessageReceived', 'listenError', 'OSC_ENCMessageReceived'.
+   *                             'timeout', 'newDataComing', 'OSCBundleReceived', 'listenError', 'OSCMessageReceived'.
    * @param {Function} handler - The callback function to handle the event.
    */
   on(eventName, handler) {

@@ -28,7 +28,7 @@
 #X obj 463 55 sel 1;
 #X text 159 102 default port 9999;
 #X obj 403 184 netreceive -u -b;
-#X msg 299 139 listen \$1 225.0.0.1;
+#X msg 299 139 listen \$1 239.255.0.1;
 #X connect 0 0 1 0;
 #X connect 1 0 2 0;
 #X connect 1 0 9 0;

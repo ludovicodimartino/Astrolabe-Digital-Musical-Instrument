@@ -1,6 +1,7 @@
 const {app, BrowserWindow} = require("electron");
 const { UdpOscListen } = require("./listenUdp");
 const { calculateRotation } = require("./sensorFusion");
+const os = require('os');
 
 let mainWindow;
 
@@ -19,7 +20,20 @@ const createWindow = () => {
     mainWindow.loadFile("./src/public/index.html")
 }
 
-const udpOscListener = new UdpOscListen("192.168.43.238");
+function getWiFiIPv4() {
+    const interfaces = os.networkInterfaces();
+    
+    for (const iface of Object.values(interfaces)) {
+        for (const info of iface) {
+            if (info.family === 'IPv4' && !info.internal && info.mac !== '00:00:00:00:00:00') {
+                return info.address; // Returns the first valid IPv4
+            }
+        }
+    }
+    return null; // No valid WiFi IPv4 found
+}
+
+const udpOscListener = new UdpOscListen(getWiFiIPv4());
 
 // When a new OSC bundle with a message containing IMU information is received
 udpOscListener.on("OSCBundleReceived", (msg) => {
@@ -36,7 +50,6 @@ udpOscListener.on("OSCBundleReceived", (msg) => {
 
 // When a new OSC message containing the encoder information is received
 udpOscListener.on("OSCMessageReceived", (msg) => {
-    console.log(msg);
     switch(msg.address){
         case "/encA":
             mainWindow.webContents.send("alidada:data", msg.args[0]);
