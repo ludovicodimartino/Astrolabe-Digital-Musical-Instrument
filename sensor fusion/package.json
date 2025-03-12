@@ -1,17 +1,29 @@
 {
   "name": "astrolabe-viewer",
+  "productName": "Astrolabe Viewer",
   "version": "1.0.0",
   "description": "Sensor fusion for the Astrolabe project",
   "main": "src/server/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "author": "Ludovico Di Martino",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^33.0.2"
+    "@electron-forge/cli": "^7.7.0",
+    "@electron-forge/maker-deb": "^7.7.0",
+    "@electron-forge/maker-rpm": "^7.7.0",
+    "@electron-forge/maker-squirrel": "^7.7.0",
+    "@electron-forge/maker-zip": "^7.7.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.7.0",
+    "@electron-forge/plugin-fuses": "^7.7.0",
+    "@electron/fuses": "^1.8.0",
+    "electron": "^33.4.4"
   },
   "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
     "osc": "^2.4.5"
   }
 }

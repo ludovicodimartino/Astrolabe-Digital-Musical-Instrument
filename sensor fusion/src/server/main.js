@@ -3,6 +3,8 @@ const { UdpOscListen } = require("./listenUdp");
 const { calculateRotation } = require("./sensorFusion");
 const os = require('os');
 
+if(require('electron-squirrel-startup')) app.quit();
+
 let mainWindow;
 
 const createWindow = () => {
