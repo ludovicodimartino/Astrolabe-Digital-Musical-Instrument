@@ -165,9 +165,14 @@ void receiveCalibration() {
       cal.accel_zerog[1] = offsets[1];
       cal.accel_zerog[2] = offsets[2];
       
-      cal.gyro_zerorate[0] = offsets[3];
-      cal.gyro_zerorate[1] = offsets[4];
-      cal.gyro_zerorate[2] = offsets[5];
+      // cal.gyro_zerorate[0] = offsets[3];
+      // cal.gyro_zerorate[1] = offsets[4];
+      // cal.gyro_zerorate[2] = offsets[5];
+        // Set gyro 0 state
+      cal.gyro_zerorate[0] = 0.0022;
+      cal.gyro_zerorate[1] = -0.0005;
+      cal.gyro_zerorate[2] = 0.0034;
+
       
       cal.mag_hardiron[0] = offsets[6];
       cal.mag_hardiron[1] = offsets[7];
