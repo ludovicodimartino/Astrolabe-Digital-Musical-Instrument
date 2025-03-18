@@ -17,11 +17,11 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
+      config: {authors: 'Ludovico Di Martino', description: 'Render in real time the movements of the astrolabe DMI.'},
     },
     {
       name: '@electron-forge/maker-rpm',
-      config: {},
+      config: {authors: 'Ludovico Di Martino', description: 'Render in real time the movements of the astrolabe DMI.'},
     },
   ],
   plugins: [

@@ -14,6 +14,7 @@ renderer.setPixelRatio(window.devicePixelRatio);
 
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// renderer.shadowMap.type = THREE.BasicShadowMap;
 
 document.body.appendChild(renderer.domElement);
 
@@ -50,7 +51,7 @@ scene.add(groundMesh);
 
 
 // Light
-const spotLight = new THREE.SpotLight(0xffffff, 3000, 100, 0.22, 1);
+const spotLight = new THREE.SpotLight(0xffffff, 3000, 100, 0.32, 1);
 spotLight.position.set(0, 25, 0);
 spotLight.castShadow = true;
 spotLight.shadow.bias = -0.0001;
@@ -97,20 +98,46 @@ const loadModel = (fileName) => {
 modelsFileNames.forEach(loadModel);
 
 // Update group rotation with IMU sensor data
+let lastUpdateTime = 0;
+const updateInterval = 50; // Update every 50ms
 ipcRenderer.on('rotation:data', (event, data) => {
-  console.log('Sensor Data:', data);
-  modelGroup.rotation.set(-data.angleY, data.angleZ, data.angleX);
+  const now = Date.now();
+  if (now - lastUpdateTime >= updateInterval) {
+    lastUpdateTime = now;
+    modelGroup.rotation.set(-data.angleY, data.angleZ, data.angleX);
+  }
 });
+
+// Helper function for linear interpolation
+function lerp(start, end, t) {
+  return start + (end - start) * t;
+}
 
 // Update alidada rotation with rotary encoder data
 ipcRenderer.on('alidada:data', (event, data) => {
-  console.log('Encoder Data Alidada:', data);
-  modelMeshes['alidada.glb'].rotation.y = -(data%30) * (Math.PI / 15);
+  const targetRotation = -(data % 30) * (Math.PI / 15);
+  const currentRotation = modelMeshes['alidada.glb'].rotation.y;
+
+  // Interpolate between current and target rotation
+  const duration = 200; // Transition duration in milliseconds
+  const steps = 30; // Number of interpolation steps
+  const stepTime = duration / steps;
+  let step = 0;
+
+  const interval = setInterval(() => {
+    if (step >= steps) {
+      clearInterval(interval);
+      modelMeshes['alidada.glb'].rotation.y = targetRotation; // Ensure final value is set
+    } else {
+      const t = step / steps;
+      modelMeshes['alidada.glb'].rotation.y = lerp(currentRotation, targetRotation, t);
+      step++;
+    }
+  }, stepTime);
 });
 
 // Update rete rotation with rotary encoder data
 ipcRenderer.on('rete:data', (event, data) => {
-  console.log('Encoder Data rete:', data);
   modelMeshes['rete.glb'].rotation.y = -(data%30) * (Math.PI / 15);
 });
 
@@ -137,12 +164,18 @@ const updateGroupRotation = (rotationData) => {
     group.rotation.set(-rotationData.angleY, rotationData.angleZ, rotationData.angleX);
 }
 
-// Animate function
-const animate = () => {
+// Animation loop
+let lastFrameTime = 0;
+const targetFPS = 30; // Target 30 FPS
+const animate = (time) => {
+  const delta = time - lastFrameTime;
+  if (delta >= 1000 / targetFPS) {
+    lastFrameTime = time;
+    controls.update();
+    renderer.render(scene, camera);
+  }
   requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
+};
 animate();
 
 ipcRenderer.on("ctrlMsg", (event, data) => {
