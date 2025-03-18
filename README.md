@@ -21,20 +21,31 @@ Astrolabio project
 ## Hardware Components
 For the prototype, the following components were used: 
 
-- [Arduino MKR 1000 WiFi](https://docs.arduino.cc/hardware/mkr-1000-wifi/) 
+- [ESP32-C3 Super Mini Dev Board](https://www.espboards.dev/esp32/esp32-c3-super-mini/) 
 - [Adafruit Precision NXP 9-DOF Breakout Board - FXOS8700 + FXAS21002](https://www.adafruit.com/product/3463)
+- [Dual rotary encoder](https://docs.rs-online.com/f0a8/A700000009887456.pdf)
+- [LiPo Rider Plus](https://wiki.seeedstudio.com/Lipo-Rider-Plus/)
+- LiPo Battery 3.7V 1800mAh
 
-For the communication between the microcontroller and the sensor, the I<sup>2</sup>C serial communication system was used. Here’s how everything was wired:
-![image](https://cdn-learn.adafruit.com/assets/assets/000/040/748/large1024/sensors_NXP9DOFBREADBOARD.png?1491841114)
+For the communication between the microcontroller and the IMU (Adafruit Precision NXP 9-DOF), the I<sup>2</sup>C serial communication system was used. Here’s how everything was wired:
+![image](./fritzing%20breadboard%20diagrams/ESP32C3Breadboard.png)
 
-## How to run the Arduino code on the board
-1. In the Arduino IDE, go to the board manager and install the package for the board MKR1000.
+## How to run the Arduino DMI code on the ESP32-C3 Dev board
+1. In the Arduino IDE, go to File->Preferences and under *Additional boards manager URLs* paste this URL:
+    
+        https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+
+    If you have other URLs you can separate them using a comma.
 2. In the Arduino IDE, go to the library manager and install all the necessary libraries:
     - [WiFi101](https://docs.arduino.cc/libraries/wifi101/)
     - [Adafruit AHRS](https://github.com/adafruit/Adafruit_AHRS)
     - [Adafruit FXAS21002C](https://github.com/adafruit/Adafruit_FXAS21002C)
     - [Adafruit FXOS8700](https://github.com/adafruit/Adafruit_FXOS8700)
     - [OSC](https://github.com/CNMAT/OSC)
-3. Write the necessary information in the [arduino_secrets.h](/arduino%20sketches/send_sensor_data_OSC/arduino_secrets.h) file to allow Arduino to access WiFi.
-4. Set the IP of your computer in the `remoteIP` variable.
+3. Write the necessary information in the [secrets.h](/arduino%20sketches/ESP32C3_send_IMU_and_encoder_Data_OSC/secrets.h) file to allow the board to access WiFi.
 5. Connect the board to the computer, compile and upload the code.
+
+## How to run the Electron App (Windows)
+
+From the [releases](https://github.com/ludovicodimartino/astrolabio-arduino/releases) download the latest Installer version. 
+Run the installer on your laptop and the program should start automatically.
