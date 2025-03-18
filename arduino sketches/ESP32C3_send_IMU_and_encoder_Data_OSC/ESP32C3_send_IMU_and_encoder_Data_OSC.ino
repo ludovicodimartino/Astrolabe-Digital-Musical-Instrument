@@ -4,6 +4,7 @@
  * #define SECRET_SSID "NetworkName"
  * #define SECRET_PASS "Password"
  *
+ * @author Ludovico Di Martino
  */
 
 // Communication libraries
@@ -16,6 +17,7 @@
 #include <Adafruit_FXAS21002C.h>
 #include <Adafruit_FXOS8700.h>
 #include <Adafruit_Sensor.h>
+#include <Adafruit_Sensor_Calibration.h>
 
 // Library with the secrets (Wifi name and password)
 #include "secrets.h"
@@ -55,6 +57,13 @@ const unsigned int localPort = 8888;             // local port to listen for OSC
 Adafruit_FXOS8700 accelmag = Adafruit_FXOS8700(0x8700A, 0x8700B); // assign a unique ID to the accelerometer and magnetometer for the I2C
 Adafruit_FXAS21002C gyro = Adafruit_FXAS21002C(0x0021002C);       // assign a unique ID to the gyroscope for the I2C
 
+// Depending on where the calibration data is stored, the cal variable is different
+#if defined(ADAFRUIT_SENSOR_CALIBRATION_USE_EEPROM)
+  Adafruit_Sensor_Calibration_EEPROM cal;
+#else
+  Adafruit_Sensor_Calibration_SDFat cal;
+#endif
+
 volatile int32_t counterEncA = 0;                   // Counter for the alidada rotary encoder
 volatile int32_t counterEncB = 0;                   // Counter for the rete rotary encoder
 volatile bool newDataToReadEncA = false;            // New data to read for the encoder A
@@ -64,6 +73,40 @@ volatile unsigned long lastInterruptSwitchTime = 0; // The time when the last sw
 #ifdef DEBUG
 void displaySensorDetails(void)
 {
+  Serial.print("Calibrations found on ");
+  if(cal.hasEEPROM()) Serial.println("EEPROM: ");
+  if(cal.hasFLASH()) Serial.println("FLASH: ");
+  Serial.print("\tMagnetic Hard Offset: ");
+  for (int i=0; i<3; i++) {
+    Serial.print(cal.mag_hardiron[i]); 
+    if (i != 2) Serial.print(", ");
+  }
+  Serial.println();
+  
+  Serial.print("\tMagnetic Soft Offset: ");
+  for (int i=0; i<9; i++) {
+    Serial.print(cal.mag_softiron[i]); 
+    if (i != 8) Serial.print(", ");
+  }
+  Serial.println();
+
+  Serial.print("\tMagnetic Field Magnitude: ");
+  Serial.println(cal.mag_field);
+
+  Serial.print("\tGyro Zero Rate Offset: ");
+  for (int i=0; i<3; i++) {
+    Serial.print(cal.gyro_zerorate[i]); 
+    if (i != 2) Serial.print(", ");
+  }
+  Serial.println();
+
+  Serial.print("\tAccel Zero G Offset: ");
+  for (int i=0; i<3; i++) {
+    Serial.print(cal.accel_zerog[i]); 
+    if (i != 2) Serial.print(", ");
+  }
+  Serial.println();
+
   sensor_t accel, mag, gyroSensor;
   accelmag.getSensor(&accel, &mag);
   Serial.println("------------------------------------");
@@ -181,15 +224,13 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
   // Signaling the disconnection with the led
   digitalWrite(WIFI_ST_LED, HIGH);
 
-  DEBUGPRINTLN("Disconnected from WiFi access point");
-  DEBUGPRINTLN("WiFi lost connection. Reason: ");
+  DEBUGPRINT("WiFi lost connection. Reason: ");
   DEBUGPRINTLN(info.wifi_sta_disconnected.reason);
   DEBUGPRINTLN("Trying to Reconnect");
 }
 
 void rotary_dt_A_down()
 {
-  // DEBUGPRINTLN("ROTARY DT A DOWN");
   // encoder in 00 state, pin 1 jumped down last
   if (digitalRead(CLK_A_PIN) == 0)
   {
@@ -198,7 +239,7 @@ void rotary_dt_A_down()
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
   }
-  // encoder in 01 state, waiting for B to jump down
+  // encoder in 01 state, waiting for pin 2 to jump down
   else
   {
     detachInterrupt(digitalPinToInterrupt(DT_A_PIN));
@@ -208,8 +249,7 @@ void rotary_dt_A_down()
 
 void rotary_clk_A_down()
 {
-  // DEBUGPRINTLN("ROTARY CLK A DOWN");
-  // encoder in 00 state, pin B jumped down last
+  // encoder in 00 state, pin 2 jumped down last
   if (digitalRead(DT_A_PIN) == 0)
   {
     counterEncA++;
@@ -217,7 +257,7 @@ void rotary_clk_A_down()
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
   }
-  // encoder in 10 state, waiting for A to jump down
+  // encoder in 10 state, waiting for pin 1 to jump down
   else
   {
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
@@ -227,8 +267,7 @@ void rotary_clk_A_down()
 
 void rotary_dt_A_up()
 {
-  // DEBUGPRINTLN("ROTARY DT A UP");
-  // encoder in 11 state, in A jumped up last
+  // encoder in 11 state, pin 1 jumped up last
   if (digitalRead(CLK_A_PIN) == 1)
   {
     counterEncA--;
@@ -236,7 +275,7 @@ void rotary_dt_A_up()
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
   }
-  // encoder in 10 state, waiting for B to jump up
+  // encoder in 10 state, waiting for pin 2 to jump up
   else
   {
     detachInterrupt(digitalPinToInterrupt(DT_A_PIN));
@@ -246,8 +285,7 @@ void rotary_dt_A_up()
 
 void rotary_clk_A_up()
 {
-  // DEBUGPRINTLN("ROTARY CLK A UP");
-  // encoder in 11 state, pin B jumped up last
+  // encoder in 11 state, pin 2 jumped up last
   if (digitalRead(DT_A_PIN) == HIGH)
   {
     counterEncA++;
@@ -255,7 +293,7 @@ void rotary_clk_A_up()
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
   }
-  // encoder in 01 state, waiting for A to jump up
+  // encoder in 01 state, waiting for pin 1 to jump up
   else
   {
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
@@ -265,8 +303,7 @@ void rotary_clk_A_up()
 
 void rotary_dt_B_down()
 {
-  // DEBUGPRINTLN("ROTARY DT B DOWN");
-  // encoder in 00 state, pin A jumped down last
+  // encoder in 00 state, pin 1 jumped down last
   if (digitalRead(CLK_B_PIN) == 0)
   {
     counterEncB--;
@@ -274,7 +311,7 @@ void rotary_dt_B_down()
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
   }
-  // encoder in 01 state, waiting for B to jump down
+  // encoder in 01 state, waiting for pin 2 to jump down
   else
   {
     detachInterrupt(digitalPinToInterrupt(DT_B_PIN));
@@ -284,8 +321,7 @@ void rotary_dt_B_down()
 
 void rotary_clk_B_down()
 {
-  // DEBUGPRINTLN("ROTARY CLK B DOWN");
-  // encoder in 00 state, pin B jumped down last
+  // encoder in 00 state, pin 2 jumped down last
   if (digitalRead(DT_B_PIN) == 0)
   {
     counterEncB++;
@@ -293,7 +329,7 @@ void rotary_clk_B_down()
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
   }
-  // encoder in 10 state, waiting for A to jump down
+  // encoder in 10 state, waiting for pin 1 to jump down
   else
   {
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
@@ -303,8 +339,7 @@ void rotary_clk_B_down()
 
 void rotary_dt_B_up()
 {
-  // DEBUGPRINTLN("ROTARY DT B UP");
-  // encoder in 11 state, in A jumped up last
+  // encoder in 11 state, pin 1 jumped up last
   if (digitalRead(CLK_B_PIN) == 1)
   {
     counterEncB--;
@@ -312,7 +347,7 @@ void rotary_dt_B_up()
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
   }
-  // encoder in 10 state, waiting for B to jump up
+  // encoder in 10 state, waiting for pin 2 to jump up
   else
   {
     detachInterrupt(digitalPinToInterrupt(DT_B_PIN));
@@ -322,7 +357,6 @@ void rotary_dt_B_up()
 
 void rotary_clk_B_up()
 {
-  // DEBUGPRINTLN("ROTARY CLK B UP");
   // encoder in 11 state, pin 2 jumped up last
   if (digitalRead(DT_B_PIN) == HIGH)
   {
@@ -344,11 +378,22 @@ void setup()
 #ifdef DEBUG
   // Serial monitor setup
   Serial.begin(115200);
-  delay(500);
+  while(!Serial){
+    delay(500);
+  }
 #endif
 
   // I2C communication pins: set SDA pin and SCL pin
   Wire.begin(SDA_PIN, SCL_PIN);
+
+  // load the calibration for the IMU
+  bool calBegin = cal.begin();
+  bool loadCal = cal.loadCalibration();
+  if (!calBegin) {
+    DEBUGPRINTLN("Failed to initialize calibration helper");
+  } else if (!loadCal) {
+    DEBUGPRINTLN("No calibration loaded/found");
+  }
 
   // accelerometer and magnetometer initialization
   if (!accelmag.begin())
@@ -373,6 +418,9 @@ void setup()
 
   // Initialize the Wifi LED
   pinMode(WIFI_ST_LED, OUTPUT);
+  
+  // Turn off the wifi status led (on by default)
+  digitalWrite(WIFI_ST_LED, HIGH);
 
   // Initialize the pins for the rotary encoders with the internal pullup
   pinMode(DT_A_PIN, INPUT_PULLUP);
@@ -479,6 +527,7 @@ void loop()
   // Debounce logic (Ignore interrupts within DEBOUNCE_TIME_SW)
   if (currentTime - lastInterruptSwitchTime > DEBOUNCE_TIME_SW && digitalRead(SW_PIN) == LOW)
   {
+    // reset the counters
     counterEncA = 0;
     counterEncB = 0;
     DEBUGPRINTLN("ENCODER SWITCH PRESSED");
@@ -497,6 +546,11 @@ void loop()
   // get new sensors event
   accelmag.getEvent(&aevent, &mevent);
   gyro.getEvent(&gevent);
+
+  // calibration step
+  cal.calibrate(mevent);
+  cal.calibrate(aevent);
+  cal.calibrate(gevent);
 
   // Prepare an OSC bundle message
   OSCBundle bundle;
@@ -521,5 +575,4 @@ void loop()
   bundle.send(Udp);
   Udp.endPacket();
   bundle.empty();
-  // delay(1000 / SEND_IMU_FREQ); // send every 1000/SEND_IMU_FREQ ms (this is not deterministic, just a lower bound on the message sent)
 }
