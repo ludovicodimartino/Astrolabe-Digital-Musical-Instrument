@@ -109,8 +109,10 @@ ipcRenderer.on('rotation:data', (event, data) => {
 });
 
 // Helper function for linear interpolation
-function lerp(start, end, t) {
-  return start + (end - start) * t;
+function lerp(start, end, t, maxValue) {
+  const delta = (end - start + maxValue) % maxValue; // Calculate the shortest path
+  const shortestDelta = delta > maxValue / 2 ? delta - maxValue : delta; // Adjust for circular wrap-around
+  return start + shortestDelta * t;
 }
 
 // Update alidada rotation with rotary encoder data
@@ -130,7 +132,7 @@ ipcRenderer.on('alidada:data', (event, data) => {
       modelMeshes['alidada.glb'].rotation.y = targetRotation; // Ensure final value is set
     } else {
       const t = step / steps;
-      modelMeshes['alidada.glb'].rotation.y = lerp(currentRotation, targetRotation, t);
+      modelMeshes['alidada.glb'].rotation.y = lerp(currentRotation, targetRotation, t, 2 * Math.PI);
       step++;
     }
   }, stepTime);
@@ -138,7 +140,25 @@ ipcRenderer.on('alidada:data', (event, data) => {
 
 // Update rete rotation with rotary encoder data
 ipcRenderer.on('rete:data', (event, data) => {
-  modelMeshes['rete.glb'].rotation.y = -(data%30) * (Math.PI / 15);
+  const targetRotation = -(data % 30) * (Math.PI / 15);
+  const currentRotation = modelMeshes['rete.glb'].rotation.y;
+
+  // Interpolate between current and target rotation
+  const duration = 200; // Transition duration in milliseconds
+  const steps = 30; // Number of interpolation steps
+  const stepTime = duration / steps;
+  let step = 0;
+
+  const interval = setInterval(() => {
+    if (step >= steps) {
+      clearInterval(interval);
+      modelMeshes['rete.glb'].rotation.y = targetRotation; // Ensure final value is set
+    } else {
+      const t = step / steps;
+      modelMeshes['rete.glb'].rotation.y = lerp(currentRotation, targetRotation, t, 2 * Math.PI);
+      step++;
+    }
+  }, stepTime);
 });
 
 // Reset rotation with rotary encoder data
