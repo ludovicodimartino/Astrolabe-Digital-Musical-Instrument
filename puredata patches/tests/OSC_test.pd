@@ -1,10 +1,10 @@
-#N canvas -27 -29 1920 956 12;
+#N canvas 0 0 1920 956 12;
 #X floatatom 49 348 5 0 0 0 - - - 0;
 #X floatatom 251 340 5 0 0 0 - - - 0;
 #X floatatom 146 342 5 0 0 0 - - - 0;
 #X obj 763 435 osc~;
 #X obj 767 505 dac~;
-#X obj 17 12 tgl 19 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000 0 1;
+#X obj 18 12 tgl 19 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000 0 1;
 #X msg 17 36 \; pd dsp \$1;
 #X floatatom 412 324 5 0 0 0 - - - 0;
 #X floatatom 573 324 5 0 0 0 - - - 0;
@@ -16,6 +16,8 @@
 #X obj 759 391 + 100;
 #X obj 404 58 tgl 19 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000 0 1;
 #X obj 404 94 sensor-receive;
+#X floatatom 1075 316 5 0 0 0 - - - 0;
+#X floatatom 1178 314 5 0 0 0 - - - 0;
 #X connect 3 0 4 0;
 #X connect 3 0 4 1;
 #X connect 5 0 6 0;
@@ -32,3 +34,5 @@
 #X connect 16 6 10 0;
 #X connect 16 7 12 0;
 #X connect 16 8 11 0;
+#X connect 16 9 17 0;
+#X connect 16 10 18 0;

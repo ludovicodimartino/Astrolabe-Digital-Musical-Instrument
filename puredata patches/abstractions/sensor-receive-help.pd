@@ -1,9 +1,9 @@
-#N canvas 254 50 1137 426 12;
-#X obj 8 49 cnv 1 1100 1 empty empty empty 8 12 0 13 #000000 #000000 0;
+#N canvas 163 52 1450 426 12;
+#X obj 8 49 cnv 1 1420 1 empty empty empty 8 12 0 13 #000000 #000000 0;
 #X obj 21 12 sensor-receive;
 #X text 129 11 - receives OSC messages from the sensors;
-#X text 20 62 The [sensor-receive] receives OSC messages from the network and parse them according to a predefined route pattern., f 156;
-#X text 21 101 You can start listening on the default port 9999 by connecting a toggle and activating the object. Alternatively \, you can specify a custom port number as the first argument., f 156;
+#X text 20 62 The [sensor-receive] receives OSC messages from the network and parse them according to a predefined route pattern., f 201;
+#X text 21 101 You can start listening on the default port 9999 by connecting a toggle and activating the object. Alternatively \, you can specify a custom port number as the first argument., f 201;
 #X obj 527 163 tgl 19 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000 0 1;
 #X obj 527 199 sensor-receive 8999;
 #X floatatom 63 330 5 0 0 0 - - - 0;
@@ -16,7 +16,7 @@
 #X floatatom 798 336 5 0 0 0 - - - 0;
 #X floatatom 921 337 5 0 0 0 - - - 0;
 #X floatatom 1043 335 5 0 0 0 - - - 0;
-#X obj 11 395 cnv 1 1100 1 empty empty empty 20 12 0 12 #202020 #404040 0;
+#X obj 11 395 cnv 1 1420 1 empty empty empty 20 12 0 12 #202020 #404040 0;
 #X text 674 196 <--- custom port;
 #X text 34 354 accelerometer x;
 #X text 155 355 accelerometer y;
@@ -27,6 +27,10 @@
 #X text 769 360 magnetometer x;
 #X text 897 359 magnetometer y;
 #X text 1022 359 magnetometer z;
+#X floatatom 1165 336 5 0 0 0 - - - 0;
+#X floatatom 1342 332 5 0 0 0 - - - 0;
+#X text 1144 360 encoder A (alidada);
+#X text 1313 358 encoder B (rete);
 #X connect 5 0 6 0;
 #X connect 6 0 7 0;
 #X connect 6 1 9 0;
@@ -37,3 +41,5 @@
 #X connect 6 6 14 0;
 #X connect 6 7 15 0;
 #X connect 6 8 16 0;
+#X connect 6 9 28 0;
+#X connect 6 10 29 0;
