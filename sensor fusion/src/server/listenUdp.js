@@ -22,12 +22,12 @@ class UdpOscListen extends osc.UDPPort {
   #TIMEOUT_MS = 5000;
   #timeoutId;
   #noDataComing = false;
-  #timeoutHandler = (msg) => {};
-  #newDataComingHandler = () => {};
-  #errorHandler = (msg) => {}; 
-  #OSCBundleReceivedHandler = (msg) => {};
-  #OSCMessageReceivedHandler = (msg) => {};
-  
+  #timeoutHandler = (msg) => { };
+  #newDataComingHandler = () => { };
+  #errorHandler = (msg) => { };
+  #OSCBundleReceivedHandler = (msg) => { };
+  #OSCMessageReceivedHandler = (msg) => { };
+
   /**
    * Constructs a UdpOscListen instance listening on the specified port.
    * @constructor
@@ -35,10 +35,11 @@ class UdpOscListen extends osc.UDPPort {
    * @param {number} [port=9999] - The port to listen for incoming OSC messages.
    */
   constructor(localAddress, port = 9999) {
-    if(localAddress === null) throw new Error("Invalid local address.");
+    if (localAddress === null) throw new Error("Invalid local address.");
     super({
       localAddress: localAddress,
-      multicastMembership: [{address: "239.255.0.1", 
+      multicastMembership: [{
+        address: "239.255.0.1",
         interface: localAddress
       }],
       localPort: port
@@ -55,6 +56,16 @@ class UdpOscListen extends osc.UDPPort {
   init() {
     this.#resetTimeout();
 
+    // Modifying the OSC library to avoid emitting messages for the boundles
+    let modOSC = require("../../node_modules/osc/src/osc.js")
+    modOSC.fireBundleEvents = function (port, bundle, timeTag, packetInfo) {
+      port.emit("bundle", bundle, timeTag, packetInfo);
+      for (var i = 0; i < bundle.packets.length; i++) {
+        var packet = bundle.packets[i];
+        // osc.firePacketEvents(port, packet, bundle.timeTag, packetInfo);
+      }
+    };
+    
     // When a bundle is received
     this.on("bundle", (bundle) => {
       this.#resetTimeout();
@@ -74,7 +85,7 @@ class UdpOscListen extends osc.UDPPort {
         this.#errorHandler("Received corrupted OSC Encoder message!");
       }
     });
-    
+
     // Start UDP listening
     this.open();
   }

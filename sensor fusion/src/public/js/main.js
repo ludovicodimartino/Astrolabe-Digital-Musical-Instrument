@@ -67,6 +67,7 @@ const modelMeshes = {};
 
 // GLTF Loader with model-loading function
 const loader = new GLTFLoader().setPath('./models_test/');
+let modelCount = 0; // Counter to keep track of loaded models
 const loadModel = (fileName) => {
   loader.load(
     fileName,
@@ -84,6 +85,13 @@ const loadModel = (fileName) => {
 
       // Add model to the group
       modelGroup.add(modelMeshes[fileName]);
+
+      modelCount++;
+      
+      // Start the animation loop when all models are loaded
+      if(modelsFileNames.length){
+        animate();
+      }
     },
     (xhr) => {
       console.log(`Loading progress (${fileName}): ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
@@ -97,73 +105,40 @@ const loadModel = (fileName) => {
 // Load models
 modelsFileNames.forEach(loadModel);
 
-// Update group rotation with IMU sensor data
-let lastUpdateTime = 0;
-const updateInterval = 50; // Update every 50ms
-ipcRenderer.on('rotation:data', (event, data) => {
-  const now = Date.now();
-  if (now - lastUpdateTime >= updateInterval) {
-    lastUpdateTime = now;
-    modelGroup.rotation.set(-data.angleY, data.angleZ, data.angleX);
-  }
-});
+// Variables to store target rotations for smooth interpolation
+let targetGroupRotation = { x: 0, y: 0, z: 0 };
+let targetAlidadaRotation = 0;
+let targetReteRotation = 0;
 
-// Helper function for linear interpolation
-function lerp(start, end, t, maxValue) {
-  const delta = (end - start + maxValue) % maxValue; // Calculate the shortest path
-  const shortestDelta = delta > maxValue / 2 ? delta - maxValue : delta; // Adjust for circular wrap-around
-  return start + shortestDelta * t;
-}
+// Current rotations for interpolation
+let currentGroupRotation = { x: 0, y: 0, z: 0 };
+let currentAlidadaRotation = 0;
+let currentReteRotation = 0;
+
+// Update group rotation with IMU sensor data
+ipcRenderer.on('rotation:data', (event, data) => {
+  targetGroupRotation = {
+    x: -data.angleY,
+    y: data.angleZ,
+    z: data.angleX
+  };
+});
 
 // Update alidada rotation with rotary encoder data
 ipcRenderer.on('alidada:data', (event, data) => {
-  const targetRotation = -(data % 30) * (Math.PI / 15);
-  const currentRotation = modelMeshes['alidada.glb'].rotation.y;
-
-  // Interpolate between current and target rotation
-  const duration = 200; // Transition duration in milliseconds
-  const steps = 30; // Number of interpolation steps
-  const stepTime = duration / steps;
-  let step = 0;
-
-  const interval = setInterval(() => {
-    if (step >= steps) {
-      clearInterval(interval);
-      modelMeshes['alidada.glb'].rotation.y = targetRotation; // Ensure final value is set
-    } else {
-      const t = step / steps;
-      modelMeshes['alidada.glb'].rotation.y = lerp(currentRotation, targetRotation, t, 2 * Math.PI);
-      step++;
-    }
-  }, stepTime);
+  targetAlidadaRotation = -(data % 30) * (Math.PI / 15);
 });
 
 // Update rete rotation with rotary encoder data
 ipcRenderer.on('rete:data', (event, data) => {
-  const targetRotation = -(data % 30) * (Math.PI / 15);
-  const currentRotation = modelMeshes['rete.glb'].rotation.y;
-
-  // Interpolate between current and target rotation
-  const duration = 200; // Transition duration in milliseconds
-  const steps = 30; // Number of interpolation steps
-  const stepTime = duration / steps;
-  let step = 0;
-
-  const interval = setInterval(() => {
-    if (step >= steps) {
-      clearInterval(interval);
-      modelMeshes['rete.glb'].rotation.y = targetRotation; // Ensure final value is set
-    } else {
-      const t = step / steps;
-      modelMeshes['rete.glb'].rotation.y = lerp(currentRotation, targetRotation, t, 2 * Math.PI);
-      step++;
-    }
-  }, stepTime);
+  targetReteRotation = -(data % 30) * (Math.PI / 15);
 });
 
 // Reset rotation with rotary encoder data
 ipcRenderer.on('reset', (event, data) => {
   console.log('Reset received');
+  currentAlidadaRotation = currentReteRotation = 0;
+  targetAlidadaRotation = targetReteRotation = 0;
   modelMeshes['alidada.glb'].rotation.y = 0;
   modelMeshes['rete.glb'].rotation.y = 0;
 });
@@ -179,11 +154,6 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Updates the rotation of the model based on the received data
-const updateGroupRotation = (rotationData) => {
-    group.rotation.set(-rotationData.angleY, rotationData.angleZ, rotationData.angleX);
-}
-
 // Animation loop
 let lastFrameTime = 0;
 const targetFPS = 30; // Target 30 FPS
@@ -191,12 +161,39 @@ const animate = (time) => {
   const delta = time - lastFrameTime;
   if (delta >= 1000 / targetFPS) {
     lastFrameTime = time;
+
+    // Smoothly interpolate group rotation
+    currentGroupRotation.x = lerp(currentGroupRotation.x, targetGroupRotation.x, 0.05);
+    currentGroupRotation.y = lerp(currentGroupRotation.y, targetGroupRotation.y, 0.05);
+    currentGroupRotation.z = lerp(currentGroupRotation.z, targetGroupRotation.z, 0.05);
+    modelGroup.rotation.set(currentGroupRotation.x, currentGroupRotation.y, currentGroupRotation.z);
+
+    // Smoothly interpolate alidada rotation
+    currentAlidadaRotation = circularLerp(currentAlidadaRotation, targetAlidadaRotation, 0.1, 2 * Math.PI);
+    modelMeshes['alidada.glb'].rotation.y = currentAlidadaRotation;
+
+    // Smoothly interpolate rete rotation
+    currentReteRotation = circularLerp(currentReteRotation, targetReteRotation, 0.1, 2 * Math.PI);
+    modelMeshes['rete.glb'].rotation.y = currentReteRotation;
+
+    // Update controls and render the scene
     controls.update();
     renderer.render(scene, camera);
   }
   requestAnimationFrame(animate);
 };
-animate();
+
+// Helper function for linear interpolation
+function lerp(start, end, t) {
+  return start + (end - start) * t;
+}
+
+// Helper function for circular interpolation
+function circularLerp(start, end, t, maxValue) {
+  const delta = (end - start + maxValue) % maxValue; // Calculate the shortest path
+  const shortestDelta = delta > maxValue / 2 ? delta - maxValue : delta; // Adjust for circular wrap-around
+  return start + shortestDelta * t;
+}
 
 ipcRenderer.on("ctrlMsg", (event, data) => {
   console.log(data);
