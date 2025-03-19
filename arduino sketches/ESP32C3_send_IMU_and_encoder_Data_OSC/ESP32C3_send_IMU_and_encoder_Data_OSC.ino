@@ -23,7 +23,7 @@
 #include "secrets.h"
 
 // The DEBUG variable for debugging purposes (printing in the serial monitor)
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #define DEBUGPRINTLN Serial.println
@@ -548,9 +548,9 @@ void loop()
   gyro.getEvent(&gevent);
 
   // calibration step
-  cal.calibrate(mevent);
-  cal.calibrate(aevent);
-  cal.calibrate(gevent);
+  // cal.calibrate(mevent);
+  // cal.calibrate(aevent);
+  // cal.calibrate(gevent);
 
   // Prepare an OSC bundle message
   OSCBundle bundle;
