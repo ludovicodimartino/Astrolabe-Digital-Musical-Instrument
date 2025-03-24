@@ -23,69 +23,68 @@
 #include "secrets.h"
 
 // The DEBUG variable for debugging purposes (printing in the serial monitor)
-// #define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 #define DEBUGPRINTLN Serial.println
 #define DEBUGPRINT Serial.print
 #else
-#define DEBUGPRINTLN // debug
-#define DEBUGPRINT   // debug
+#define DEBUGPRINTLN  // debug
+#define DEBUGPRINT    // debug
 #endif
 
-#define DT_A_PIN 4  // Alidada encoder pin 1
-#define DT_B_PIN 2  // Rete encoder pin 1
-#define CLK_A_PIN 3 // Alidada encoder pin 2
-#define CLK_B_PIN 1 // Rete encoder pin 2
-#define SW_PIN 0    // Encoder switch pin
+#define DT_A_PIN 4   // Alidada encoder pin 1
+#define DT_B_PIN 2   // Rete encoder pin 1
+#define CLK_A_PIN 3  // Alidada encoder pin 2
+#define CLK_B_PIN 1  // Rete encoder pin 2
+#define SW_PIN 0     // Encoder switch pin
 
-#define SDA_PIN 5 // I2C SDA pin (used for the IMU sensor)
-#define SCL_PIN 6 // I2C SCL pin (used for the IMU sensor)
+#define SDA_PIN 5  // I2C SDA pin (used for the IMU sensor)
+#define SCL_PIN 6  // I2C SCL pin (used for the IMU sensor)
 
-#define WIFI_ST_LED 8 // The led that signals the wifi status
+#define WIFI_ST_LED 8  // The led that signals the wifi status
 
-#define DEBOUNCE_TIME_SW 2000 // The interval used for switch debouncing
+#define DEBOUNCE_TIME_SW 2000  // The interval used for switch debouncing
 
-char ssid[] = SECRET_SSID; // network SSID (name)
-char pass[] = SECRET_PASS; // network pass (use for WPA, or use as key for WEP)
+char ssid[] = SECRET_SSID;  // network SSID (name)
+char pass[] = SECRET_PASS;  // network pass (use for WPA, or use as key for WEP)
 
-WiFiUDP Udp;                                     // A UDP instance to send and receive packets over UDP
-const IPAddress multicastIPAddr(239, 255, 0, 1); // remote IP address
-const unsigned int remotePort = 9999;            // remote port to send OSC
-const unsigned int localPort = 8888;             // local port to listen for OSC packets
+WiFiUDP Udp;                                      // A UDP instance to send and receive packets over UDP
+const IPAddress multicastIPAddr(239, 255, 0, 1);  // remote IP address
+const unsigned int remotePort = 9999;             // remote port to send OSC
+const unsigned int localPort = 8888;              // local port to listen for OSC packets
 
-Adafruit_FXOS8700 accelmag = Adafruit_FXOS8700(0x8700A, 0x8700B); // assign a unique ID to the accelerometer and magnetometer for the I2C
-Adafruit_FXAS21002C gyro = Adafruit_FXAS21002C(0x0021002C);       // assign a unique ID to the gyroscope for the I2C
+Adafruit_FXOS8700 accelmag = Adafruit_FXOS8700(0x8700A, 0x8700B);  // assign a unique ID to the accelerometer and magnetometer for the I2C
+Adafruit_FXAS21002C gyro = Adafruit_FXAS21002C(0x0021002C);        // assign a unique ID to the gyroscope for the I2C
 
 // Depending on where the calibration data is stored, the cal variable is different
 #if defined(ADAFRUIT_SENSOR_CALIBRATION_USE_EEPROM)
-  Adafruit_Sensor_Calibration_EEPROM cal;
+Adafruit_Sensor_Calibration_EEPROM cal;
 #else
-  Adafruit_Sensor_Calibration_SDFat cal;
+Adafruit_Sensor_Calibration_SDFat cal;
 #endif
 
-volatile int32_t counterEncA = 0;                   // Counter for the alidada rotary encoder
-volatile int32_t counterEncB = 0;                   // Counter for the rete rotary encoder
-volatile bool newDataToReadEncA = false;            // New data to read for the encoder A
-volatile bool newDataToReadEncB = false;            // New data to read for the encoder B
-volatile unsigned long lastInterruptSwitchTime = 0; // The time when the last switch interrupt was executed
+volatile int32_t counterEncA = 0;         // Counter for the alidada rotary encoder
+volatile int32_t counterEncB = 0;         // Counter for the rete rotary encoder
+volatile bool newDataToReadEncA = false;  // New data to read for the encoder A
+volatile bool newDataToReadEncB = false;  // New data to read for the encoder B
+unsigned long lastSwitchPressedTime = 0;  // The time when the last switch interrupt was executed
 
 #ifdef DEBUG
-void displaySensorDetails(void)
-{
+void displaySensorDetails(void) {
   Serial.print("Calibrations found on ");
-  if(cal.hasEEPROM()) Serial.println("EEPROM: ");
-  if(cal.hasFLASH()) Serial.println("FLASH: ");
+  if (cal.hasEEPROM()) Serial.println("EEPROM: ");
+  if (cal.hasFLASH()) Serial.println("FLASH: ");
   Serial.print("\tMagnetic Hard Offset: ");
-  for (int i=0; i<3; i++) {
-    Serial.print(cal.mag_hardiron[i]); 
+  for (int i = 0; i < 3; i++) {
+    Serial.print(cal.mag_hardiron[i]);
     if (i != 2) Serial.print(", ");
   }
   Serial.println();
-  
+
   Serial.print("\tMagnetic Soft Offset: ");
-  for (int i=0; i<9; i++) {
-    Serial.print(cal.mag_softiron[i]); 
+  for (int i = 0; i < 9; i++) {
+    Serial.print(cal.mag_softiron[i]);
     if (i != 8) Serial.print(", ");
   }
   Serial.println();
@@ -94,15 +93,15 @@ void displaySensorDetails(void)
   Serial.println(cal.mag_field);
 
   Serial.print("\tGyro Zero Rate Offset: ");
-  for (int i=0; i<3; i++) {
-    Serial.print(cal.gyro_zerorate[i]); 
+  for (int i = 0; i < 3; i++) {
+    Serial.print(cal.gyro_zerorate[i]);
     if (i != 2) Serial.print(", ");
   }
   Serial.println();
 
   Serial.print("\tAccel Zero G Offset: ");
-  for (int i=0; i<3; i++) {
-    Serial.print(cal.accel_zerog[i]); 
+  for (int i = 0; i < 3; i++) {
+    Serial.print(cal.accel_zerog[i]);
     if (i != 2) Serial.print(", ");
   }
   Serial.println();
@@ -180,8 +179,7 @@ void displaySensorDetails(void)
 }
 #endif
 
-void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info)
-{
+void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   // Signaling the connection with the led
   digitalWrite(WIFI_ST_LED, LOW);
 
@@ -219,8 +217,7 @@ void WiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info)
   DEBUGPRINTLN(remotePort);
 }
 
-void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
-{
+void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   // Signaling the disconnection with the led
   digitalWrite(WIFI_ST_LED, HIGH);
 
@@ -229,159 +226,137 @@ void WiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info)
   DEBUGPRINTLN("Trying to Reconnect");
 }
 
-void rotary_dt_A_down()
-{
+IRAM_ATTR void rotary_dt_A_down() {
   // encoder in 00 state, pin 1 jumped down last
-  if (digitalRead(CLK_A_PIN) == 0)
-  {
+  if (digitalRead(CLK_A_PIN) == 0) {
     counterEncA--;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
   }
   // encoder in 01 state, waiting for pin 2 to jump down
-  else
-  {
+  else {
     detachInterrupt(digitalPinToInterrupt(DT_A_PIN));
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
   }
 }
 
-void rotary_clk_A_down()
-{
+IRAM_ATTR void rotary_clk_A_down() {
   // encoder in 00 state, pin 2 jumped down last
-  if (digitalRead(DT_A_PIN) == 0)
-  {
+  if (digitalRead(DT_A_PIN) == 0) {
     counterEncA++;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
   }
   // encoder in 10 state, waiting for pin 1 to jump down
-  else
-  {
+  else {
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
     detachInterrupt(digitalPinToInterrupt(CLK_A_PIN));
   }
 }
 
-void rotary_dt_A_up()
-{
+IRAM_ATTR void rotary_dt_A_up() {
   // encoder in 11 state, pin 1 jumped up last
-  if (digitalRead(CLK_A_PIN) == 1)
-  {
+  if (digitalRead(CLK_A_PIN) == 1) {
     counterEncA--;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
   }
   // encoder in 10 state, waiting for pin 2 to jump up
-  else
-  {
+  else {
     detachInterrupt(digitalPinToInterrupt(DT_A_PIN));
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
   }
 }
 
-void rotary_clk_A_up()
-{
+IRAM_ATTR void rotary_clk_A_up() {
   // encoder in 11 state, pin 2 jumped up last
-  if (digitalRead(DT_A_PIN) == HIGH)
-  {
+  if (digitalRead(DT_A_PIN) == HIGH) {
     counterEncA++;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
   }
   // encoder in 01 state, waiting for pin 1 to jump up
-  else
-  {
+  else {
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
     detachInterrupt(digitalPinToInterrupt(CLK_A_PIN));
   }
 }
 
-void rotary_dt_B_down()
-{
+IRAM_ATTR void rotary_dt_B_down() {
   // encoder in 00 state, pin 1 jumped down last
-  if (digitalRead(CLK_B_PIN) == 0)
-  {
+  if (digitalRead(CLK_B_PIN) == 0) {
     counterEncB--;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
   }
   // encoder in 01 state, waiting for pin 2 to jump down
-  else
-  {
+  else {
     detachInterrupt(digitalPinToInterrupt(DT_B_PIN));
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
   }
 }
 
-void rotary_clk_B_down()
-{
+IRAM_ATTR void rotary_clk_B_down() {
   // encoder in 00 state, pin 2 jumped down last
-  if (digitalRead(DT_B_PIN) == 0)
-  {
+  if (digitalRead(DT_B_PIN) == 0) {
     counterEncB++;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
   }
   // encoder in 10 state, waiting for pin 1 to jump down
-  else
-  {
+  else {
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
     detachInterrupt(digitalPinToInterrupt(CLK_B_PIN));
   }
 }
 
-void rotary_dt_B_up()
-{
+IRAM_ATTR void rotary_dt_B_up() {
   // encoder in 11 state, pin 1 jumped up last
-  if (digitalRead(CLK_B_PIN) == 1)
-  {
+  if (digitalRead(CLK_B_PIN) == 1) {
     counterEncB--;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
   }
   // encoder in 10 state, waiting for pin 2 to jump up
-  else
-  {
+  else {
     detachInterrupt(digitalPinToInterrupt(DT_B_PIN));
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
   }
 }
 
-void rotary_clk_B_up()
-{
+IRAM_ATTR void rotary_clk_B_up() {
   // encoder in 11 state, pin 2 jumped up last
-  if (digitalRead(DT_B_PIN) == HIGH)
-  {
+  if (digitalRead(DT_B_PIN) == HIGH) {
     counterEncB++;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
   }
   // encoder in 01 state, waiting for pin 1 to jump up
-  else
-  {
+  else {
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
     detachInterrupt(digitalPinToInterrupt(CLK_B_PIN));
   }
 }
 
-void setup()
-{
+void setup() {
 #ifdef DEBUG
   // Serial monitor setup
   Serial.begin(115200);
-  while(!Serial){
+  while (!Serial) {
     delay(500);
   }
 #endif
+
+  // Initialize the status LED
+  pinMode(WIFI_ST_LED, OUTPUT);
 
   // I2C communication pins: set SDA pin and SCL pin
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -396,16 +371,14 @@ void setup()
   }
 
   // accelerometer and magnetometer initialization
-  if (!accelmag.begin())
-  {
+  if (!accelmag.begin()) {
     // There was a problem detecting the FXOS8700
     DEBUGPRINTLN("No FXOS8700 detected ... Check your wiring!");
     ESP.deepSleep(0);
   }
 
   // gyroscope initialization
-  if (!gyro.begin())
-  {
+  if (!gyro.begin()) {
     // there was a problem detecting the FXAS21002C
     DEBUGPRINTLN("No FXAS21002C detected ... Check your wiring!");
     ESP.deepSleep(0);
@@ -416,9 +389,6 @@ void setup()
   displaySensorDetails();
 #endif
 
-  // Initialize the Wifi LED
-  pinMode(WIFI_ST_LED, OUTPUT);
-  
   // Turn off the wifi status led (on by default)
   digitalWrite(WIFI_ST_LED, HIGH);
 
@@ -436,32 +406,28 @@ void setup()
   int8_t clk_B = digitalRead(CLK_B_PIN);
 
   // Initial position of the encoder A 11
-  if ((dt_A == HIGH) && (clk_A == HIGH))
-  {
+  if ((dt_A == HIGH) && (clk_A == HIGH)) {
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
   }
 
   // Initial position of the encoder A 00
-  if ((dt_A == LOW) && (clk_A == LOW))
-  {
-    attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, RISING);
+  if ((dt_A == LOW) && (clk_A == LOW)) {
+    attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
   }
 
   // Initial position of the encoder B 11
-  if ((dt_B == HIGH) && (clk_B == HIGH))
-  {
+  if ((dt_B == HIGH) && (clk_B == HIGH)) {
     DEBUGPRINTLN("Encoder B position 11");
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
   }
 
   // Initial position of the encoder B 00
-  if ((dt_B == LOW) && (clk_B == LOW))
-  {
+  if ((dt_B == LOW) && (clk_B == LOW)) {
     DEBUGPRINTLN("Encoder B position 00");
-    attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, RISING);
+    attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
     attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
   }
 
@@ -483,8 +449,7 @@ void setup()
   WiFi.begin(ssid, pass);
 
   // Wait for the connection to be ready
-  while (WiFi.status() != WL_CONNECTED)
-  {
+  while (WiFi.status() != WL_CONNECTED) {
     delay(100);
   }
 
@@ -496,11 +461,9 @@ void setup()
   msg.empty();
 }
 
-void loop()
-{
+void loop() {
   // Reading the data from the rotary encoders
-  if (newDataToReadEncA)
-  {
+  if (newDataToReadEncA) {
     OSCMessage msg("/encA");
     msg.add(counterEncA);
     Udp.beginPacket(multicastIPAddr, remotePort);
@@ -510,8 +473,7 @@ void loop()
     DEBUGPRINTLN(counterEncA);
     newDataToReadEncA = false;
   }
-  if (newDataToReadEncB)
-  {
+  if (newDataToReadEncB) {
     OSCMessage msg("/encB");
     msg.add(counterEncB);
     Udp.beginPacket(multicastIPAddr, remotePort);
@@ -525,8 +487,7 @@ void loop()
   // Check if the switch was pressed
   unsigned long currentTime = millis();
   // Debounce logic (Ignore interrupts within DEBOUNCE_TIME_SW)
-  if (currentTime - lastInterruptSwitchTime > DEBOUNCE_TIME_SW && digitalRead(SW_PIN) == LOW)
-  {
+  if (currentTime - lastSwitchPressedTime > DEBOUNCE_TIME_SW && digitalRead(SW_PIN) == LOW) {
     // reset the counters
     counterEncA = 0;
     counterEncB = 0;
@@ -538,7 +499,7 @@ void loop()
     msg.send(Udp);
     Udp.endPacket();
     msg.empty();
-    lastInterruptSwitchTime = currentTime;
+    lastSwitchPressedTime = currentTime;
   }
 
   sensors_event_t aevent, mevent, gevent;
