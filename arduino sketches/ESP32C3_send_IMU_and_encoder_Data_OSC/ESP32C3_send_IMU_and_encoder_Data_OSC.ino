@@ -23,7 +23,7 @@
 #include "secrets.h"
 
 // The DEBUG variable for debugging purposes (printing in the serial monitor)
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #define DEBUGPRINTLN Serial.println
@@ -64,11 +64,11 @@ Adafruit_Sensor_Calibration_EEPROM cal;
 Adafruit_Sensor_Calibration_SDFat cal;
 #endif
 
-volatile int32_t counterEncA = 0;         // Counter for the alidada rotary encoder
+volatile int32_t counterEncA = 0;         // Counter for the alidade rotary encoder
 volatile int32_t counterEncB = 0;         // Counter for the rete rotary encoder
 volatile bool newDataToReadEncA = false;  // New data to read for the encoder A
 volatile bool newDataToReadEncB = false;  // New data to read for the encoder B
-unsigned long lastSwitchPressedTime = 0;  // The time when the last switch interrupt was executed
+unsigned long lastSwitchPressedTime = 0;  // The last time when a switch press event was detected
 
 #ifdef DEBUG
 void displaySensorDetails(void) {
@@ -232,7 +232,7 @@ IRAM_ATTR void rotary_dt_A_down() {
     counterEncA--;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
-    attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
+    detachInterrupt(digitalPinToInterrupt(CLK_A_PIN));
   }
   // encoder in 01 state, waiting for pin 2 to jump down
   else {
@@ -247,7 +247,7 @@ IRAM_ATTR void rotary_clk_A_down() {
     counterEncA++;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
-    attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
+    detachInterrupt(digitalPinToInterrupt(CLK_A_PIN));
   }
   // encoder in 10 state, waiting for pin 1 to jump down
   else {
@@ -262,7 +262,7 @@ IRAM_ATTR void rotary_dt_A_up() {
     counterEncA--;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
-    attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
+    detachInterrupt(digitalPinToInterrupt(CLK_A_PIN));
   }
   // encoder in 10 state, waiting for pin 2 to jump up
   else {
@@ -277,7 +277,7 @@ IRAM_ATTR void rotary_clk_A_up() {
     counterEncA++;
     newDataToReadEncA = true;
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
-    attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
+    detachInterrupt(digitalPinToInterrupt(CLK_A_PIN));
   }
   // encoder in 01 state, waiting for pin 1 to jump up
   else {
@@ -292,7 +292,7 @@ IRAM_ATTR void rotary_dt_B_down() {
     counterEncB--;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
-    attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
+    detachInterrupt(digitalPinToInterrupt(CLK_B_PIN));
   }
   // encoder in 01 state, waiting for pin 2 to jump down
   else {
@@ -307,7 +307,7 @@ IRAM_ATTR void rotary_clk_B_down() {
     counterEncB++;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
-    attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
+    detachInterrupt(digitalPinToInterrupt(CLK_B_PIN));
   }
   // encoder in 10 state, waiting for pin 1 to jump down
   else {
@@ -322,7 +322,7 @@ IRAM_ATTR void rotary_dt_B_up() {
     counterEncB--;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
-    attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
+    detachInterrupt(digitalPinToInterrupt(CLK_B_PIN));
   }
   // encoder in 10 state, waiting for pin 2 to jump up
   else {
@@ -337,7 +337,7 @@ IRAM_ATTR void rotary_clk_B_up() {
     counterEncB++;
     newDataToReadEncB = true;
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
-    attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
+    detachInterrupt(digitalPinToInterrupt(CLK_B_PIN));
   }
   // encoder in 01 state, waiting for pin 1 to jump up
   else {
@@ -405,30 +405,34 @@ void setup() {
   int8_t dt_B = digitalRead(DT_B_PIN);
   int8_t clk_B = digitalRead(CLK_B_PIN);
 
-  // Initial position of the encoder A 11
-  if ((dt_A == HIGH) && (clk_A == HIGH)) {
-    attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
-    attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
-  }
-
-  // Initial position of the encoder A 00
-  if ((dt_A == LOW) && (clk_A == LOW)) {
+  
+  DEBUGPRINT("Encoder A position");
+  DEBUGPRINT(" dt_A:");
+  DEBUGPRINT(dt_A);
+  DEBUGPRINT(" clk_A:");
+  DEBUGPRINTLN(clk_A);
+  // Initial position of the encoder A 00 or 01
+  if (((dt_A == LOW) && (clk_A == LOW) || ((dt_A == LOW) && (clk_A == HIGH)))) {
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_up, RISING);
-    attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_up, RISING);
+  }
+  // Initial position of the encoder A 11 or 10
+  else {
+    attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
   }
 
-  // Initial position of the encoder B 11
-  if ((dt_B == HIGH) && (clk_B == HIGH)) {
-    DEBUGPRINTLN("Encoder B position 11");
-    attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
-    attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_down, FALLING);
-  }
-
-  // Initial position of the encoder B 00
-  if ((dt_B == LOW) && (clk_B == LOW)) {
-    DEBUGPRINTLN("Encoder B position 00");
+  
+  DEBUGPRINT("Encoder B position");
+  DEBUGPRINT(" dt_B:");
+  DEBUGPRINT(dt_B);
+  DEBUGPRINT(" clk_B:");
+  DEBUGPRINTLN(clk_B);
+  // Initial position of the encoder B 00 or 01
+  if (((dt_B == LOW) && (clk_B == LOW)) || ((dt_B == LOW) && (clk_B == HIGH))) {
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_up, RISING);
-    attachInterrupt(digitalPinToInterrupt(CLK_B_PIN), rotary_clk_B_up, RISING);
+  }
+  // Initial position of the encoder B 11 or 10
+  else {
+    attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
   }
 
   // network connection
@@ -536,4 +540,5 @@ void loop() {
   bundle.send(Udp);
   Udp.endPacket();
   bundle.empty();
+  delay(50);
 }
