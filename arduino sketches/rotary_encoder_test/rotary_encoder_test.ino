@@ -14,7 +14,7 @@
 // Library with the secrets
 #include "secrets.h"
 
-// #define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 #define DEBUGPRINTLN Serial.println
@@ -24,12 +24,12 @@
 #define DEBUGPRINT    // debug
 #endif
 
-#define DT_A_PIN 4
-#define DT_B_PIN 16
-#define CLK_A_PIN 5
-#define CLK_B_PIN 17
-#define SW_PIN 18
-#define WIFI_LED_PIN 2  // pin for the led signaling the status of the wifi
+#define DT_A_PIN 0  // Alidada encoder pin 1
+#define DT_B_PIN 4   // Rete encoder pin 1
+#define CLK_A_PIN 1  // Alidada encoder pin 2
+#define CLK_B_PIN 3  // Rete encoder pin 2
+#define SW_PIN 2     // Encoder switch pin
+#define WIFI_LED_PIN 8  // pin for the led signaling the status of the wifi
 
 int numA = 0;
 int numB = 0;
@@ -314,10 +314,12 @@ void rotary_clk_B_up() {
 void setup() {
 #ifdef DEBUG
   //Serial monitor setup
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   // Wait for serial to start
-  delay(500);
+  while (!Serial) {
+    delay(500);
+  }
 #endif
 
   // Initialize the pins with the internal pullup
@@ -334,8 +336,16 @@ void setup() {
   int8_t dt_B = digitalRead(DT_B_PIN);
   int8_t clk_B = digitalRead(CLK_B_PIN);
 
+  delay(2000);
+
+  DEBUGPRINT("Encoder A position");
+  DEBUGPRINT(" dt_A:");
+  DEBUGPRINT(dt_A);
+  DEBUGPRINT(" clk_A:");
+  DEBUGPRINTLN(clk_A);
   // Initial position of the encoder 11
   if ((dt_A == HIGH) && (clk_A == HIGH)) {
+    DEBUGPRINTLN("ROTARY A 11");
     attachInterrupt(digitalPinToInterrupt(DT_A_PIN), rotary_dt_A_down, FALLING);
     attachInterrupt(digitalPinToInterrupt(CLK_A_PIN), rotary_clk_A_down, FALLING);
     // neutral = 1; /* true */
@@ -348,6 +358,11 @@ void setup() {
     // neutral = 0; /* false */
   }
 
+  DEBUGPRINT("Encoder B position");
+  DEBUGPRINT(" dt_B:");
+  DEBUGPRINT(dt_B);
+  DEBUGPRINT(" clk_B:");
+  DEBUGPRINTLN(clk_B);
   // Initial position of the encoder 11
   if ((dt_B == HIGH) && (clk_B == HIGH)) {
     attachInterrupt(digitalPinToInterrupt(DT_B_PIN), rotary_dt_B_down, FALLING);
@@ -386,11 +401,7 @@ void loop() {
   if (sw == LOW) {
     numA=0;
     numB=0;
-    OSCMessage msg("/reset");
-    Udp.beginPacket(remoteIP, remotePort);
-    msg.send(Udp);
-    Udp.endPacket();
-    msg.empty();
+    DEBUGPRINTLN("SWITCH PRESSED");
   }
   delay(500);
 }

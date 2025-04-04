@@ -33,11 +33,11 @@
 #define DEBUGPRINT    // debug
 #endif
 
-#define DT_A_PIN 4   // Alidada encoder pin 1
-#define DT_B_PIN 2   // Rete encoder pin 1
+#define DT_A_PIN 4  // Alidada encoder pin 1
+#define DT_B_PIN 0   // Rete encoder pin 1
 #define CLK_A_PIN 3  // Alidada encoder pin 2
 #define CLK_B_PIN 1  // Rete encoder pin 2
-#define SW_PIN 0     // Encoder switch pin
+#define SW_PIN 2     // Encoder switch pin
 
 #define SDA_PIN 5  // I2C SDA pin (used for the IMU sensor)
 #define SCL_PIN 6  // I2C SCL pin (used for the IMU sensor)
@@ -353,10 +353,14 @@ void setup() {
   while (!Serial) {
     delay(500);
   }
+  DEBUGPRINTLN("Debug Mode");
 #endif
 
   // Initialize the status LED
   pinMode(WIFI_ST_LED, OUTPUT);
+
+  // Turn off the status led (on by default)
+  digitalWrite(WIFI_ST_LED, HIGH);
 
   // I2C communication pins: set SDA pin and SCL pin
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -374,23 +378,20 @@ void setup() {
   if (!accelmag.begin()) {
     // There was a problem detecting the FXOS8700
     DEBUGPRINTLN("No FXOS8700 detected ... Check your wiring!");
-    ESP.deepSleep(0);
+    while(1) delay(10);
   }
 
   // gyroscope initialization
   if (!gyro.begin()) {
     // there was a problem detecting the FXAS21002C
     DEBUGPRINTLN("No FXAS21002C detected ... Check your wiring!");
-    ESP.deepSleep(0);
+    while(1) delay(10);
   }
 
 #ifdef DEBUG
   // print sensor data
   displaySensorDetails();
 #endif
-
-  // Turn off the wifi status led (on by default)
-  digitalWrite(WIFI_ST_LED, HIGH);
 
   // Initialize the pins for the rotary encoders with the internal pullup
   pinMode(DT_A_PIN, INPUT_PULLUP);
