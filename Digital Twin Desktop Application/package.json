@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
+    "mathjs": "^14.4.0",
     "osc": "^2.4.5"
   }
 }

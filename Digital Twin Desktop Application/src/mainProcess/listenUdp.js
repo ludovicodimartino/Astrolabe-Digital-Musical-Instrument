@@ -35,7 +35,13 @@ class UdpOscListen extends osc.UDPPort {
    * @param {number} [port=9999] - The port to listen for incoming OSC messages.
    */
   constructor(localAddress, port = 9999) {
-    if (localAddress === null) throw new Error("Invalid local address.");
+    if (!localAddress) {
+      const wifiAddress = UdpOscListen.#getWiFiIPv4();
+      if (!wifiAddress) {
+        throw new Error("No valid WiFi IPv4 address found.");
+      }
+      localAddress = wifiAddress;
+    }
     super({
       localAddress: localAddress,
       multicastMembership: [{
@@ -57,7 +63,7 @@ class UdpOscListen extends osc.UDPPort {
     this.#resetTimeout();
 
     // Modifying the OSC library to avoid emitting messages for the boundles
-    let modOSC = require("osc/src/osc.js")
+    let modOSC = require("osc/src/osc")
     modOSC.fireBundleEvents = function (port, bundle, timeTag, packetInfo) {
       port.emit("bundle", bundle, timeTag, packetInfo);
       for (var i = 0; i < bundle.packets.length; i++) {
@@ -65,13 +71,14 @@ class UdpOscListen extends osc.UDPPort {
         // osc.firePacketEvents(port, packet, bundle.timeTag, packetInfo);
       }
     };
-    
+
     // When a bundle is received
     this.on("bundle", (bundle) => {
       this.#resetTimeout();
       try {
         this.#OSCBundleReceivedHandler(bundle.packets);
       } catch (e) {
+        console.log("Error in bundle handler:", e);
         this.#errorHandler("Received corrupted OSC IMU message!");
       }
     });
@@ -88,6 +95,23 @@ class UdpOscListen extends osc.UDPPort {
 
     // Start UDP listening
     this.open();
+  }
+
+  /**
+ * This method retrieves the IPv4 address of the WiFi interface.
+ * @returns {string} The IPv4 address of the WiFi interface.
+ */
+  static #getWiFiIPv4() {
+    const interfaces = os.networkInterfaces();
+
+    for (const iface of Object.values(interfaces)) {
+      for (const info of iface) {
+        if (info.family === 'IPv4' && !info.internal && info.mac !== '00:00:00:00:00:00') {
+          return info.address; // Returns the first valid IPv4
+        }
+      }
+    }
+    return null; // No valid WiFi IPv4 found
   }
 
   /**
@@ -111,8 +135,7 @@ class UdpOscListen extends osc.UDPPort {
   /**
    * Sets custom event handlers for specific events.
    *
-   * @param {string} eventName - The name of the event. Possible values:
-   *                             'timeout', 'newDataComing', 'OSCBundleReceived', 'listenError', 'OSCMessageReceived'.
+   * @param {'timeout' | 'newDataComing' | 'OSCBundleReceived' | 'listenError' | 'OSCMessageReceived'} eventName - The name of the event.
    * @param {Function} handler - The callback function to handle the event.
    */
   on(eventName, handler) {

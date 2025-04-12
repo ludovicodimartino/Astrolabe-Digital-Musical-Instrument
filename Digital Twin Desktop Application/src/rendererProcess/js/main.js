@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-const { ipcRenderer } = require('electron') 
-import { showErrorMessage,  checkboxSelectorVisibility } from './messages.js'
+const { ipcRenderer } = require('electron')
+import { showErrorMessage, checkboxSelectorVisibility } from './messages.js'
 
 /** Manage the top bar */
 const customTopBarDiv = document.getElementById('customTopBar');
@@ -23,26 +23,26 @@ let isFullscreen = false;
 
 // Toggle fullscreen mode
 document.getElementById('fullscreenButton').addEventListener('click', () => {
-    ipcRenderer.send('fullscreen-app');
-    isFullscreen = !isFullscreen;
-    if (isFullscreen) {
-      bodyElement.classList.add('fullscreen-mode');
-    } else {
-      bodyElement.classList.remove('fullscreen-mode');
-    }
-    console.log("Fullscreen mode toggled:", isFullscreen);
-    customTopBarDiv.style.display = isFullscreen ? 'none' : 'flex'; // Hide the top bar in fullscreen mode
-    checkboxSelectorVisibility(); // Hide the checkbox when in fullscreen mode
+  ipcRenderer.send('fullscreen-app');
+  isFullscreen = !isFullscreen;
+  if (isFullscreen) {
+    bodyElement.classList.add('fullscreen-mode');
+  } else {
+    bodyElement.classList.remove('fullscreen-mode');
+  }
+  console.log("Fullscreen mode toggled:", isFullscreen);
+  customTopBarDiv.style.display = isFullscreen ? 'none' : 'flex'; // Hide the top bar in fullscreen mode
+  checkboxSelectorVisibility(); // Hide the checkbox when in fullscreen mode
 });
 
 // Listen for keydown events (Escape key to exit fullscreen)
 document.addEventListener('keydown', (event) => {
   if (isFullscreen && event.key === 'Escape') {
-      ipcRenderer.send('exit-fullscreen-app');
-      isFullscreen = false;
-      customTopBarDiv.style.display = 'flex';
-      checkboxSelectorVisibility();
-      bodyElement.classList.remove('fullscreen-mode');
+    ipcRenderer.send('exit-fullscreen-app');
+    isFullscreen = false;
+    customTopBarDiv.style.display = 'flex';
+    checkboxSelectorVisibility();
+    bodyElement.classList.remove('fullscreen-mode');
   }
 });
 
@@ -129,9 +129,9 @@ const loadModel = (fileName) => {
       modelGroup.add(modelMeshes[fileName]);
 
       modelCount++;
-      
+
       // Start the animation loop when all models are loaded
-      if(modelCount === modelsFileNames.length){
+      if (modelCount === modelsFileNames.length) {
         animate();
       }
     },
@@ -153,17 +153,13 @@ let targetAlidadaRotation = 0;
 let targetReteRotation = 0;
 
 // Current rotations for interpolation
-let currentGroupRotation = { x: 0, y: 0, z: 0 };
+let currentGroupQuaternion = new THREE.Quaternion(0, 0, 0, 1);
 let currentAlidadaRotation = 0;
 let currentReteRotation = 0;
 
 // Update group rotation with IMU sensor data
 ipcRenderer.on('rotation:data', (event, data) => {
-  targetGroupRotation = {
-    x: -data.angleY,
-    y: data.angleZ,
-    z: data.angleX
-  };
+  currentGroupQuaternion.set(-data.y, data.z, -data.x, data.w);
 });
 
 // Update alidada rotation with rotary encoder data
@@ -205,11 +201,8 @@ const animate = (time) => {
     lastFrameTime = time;
 
     // Smoothly interpolate group rotation
-    currentGroupRotation.x = lerp(currentGroupRotation.x, targetGroupRotation.x, 0.05);
-    currentGroupRotation.y = lerp(currentGroupRotation.y, targetGroupRotation.y, 0.05);
-    currentGroupRotation.z = lerp(currentGroupRotation.z, targetGroupRotation.z, 0.05);
-    modelGroup.rotation.set(currentGroupRotation.x, currentGroupRotation.y, currentGroupRotation.z);
-
+    modelGroup.quaternion.slerp(currentGroupQuaternion, 0.1);
+    
     // Smoothly interpolate alidada rotation
     currentAlidadaRotation = circularLerp(currentAlidadaRotation, targetAlidadaRotation, 0.1, 2 * Math.PI);
     modelMeshes['alidada.glb'].rotation.y = currentAlidadaRotation;
@@ -224,11 +217,6 @@ const animate = (time) => {
   }
   requestAnimationFrame(animate);
 };
-
-// Helper function for linear interpolation
-function lerp(start, end, t) {
-  return start + (end - start) * t;
-}
 
 // Helper function for circular interpolation
 function circularLerp(start, end, t, maxValue) {
