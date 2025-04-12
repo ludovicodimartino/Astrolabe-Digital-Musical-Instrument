@@ -50,7 +50,21 @@ For the communication between the microcontroller and the IMU (Adafruit Precisio
 3.  Write the necessary information in the [secrets.h](/arduino%20sketches/ESP32C3_send_IMU_and_encoder_Data_OSC/secrets.h) file to allow the board to access WiFi.
 4.  Connect the board to the computer, compile and upload the code.
 
-## How to run the Electron App (Windows)
+## How to run the Electron App 
 
+### Production version (Windows)
 From the [releases](https://github.com/ludovicodimartino/astrolabio-arduino/releases) download the latest Installer version.
 Run the installer on your laptop and the program should start automatically.
+
+### Dev version
+You must have node.js installed in your system. You can download it from [here](https://nodejs.org/en).
+
+Navigate to the [Digital Twin Desktop Application](./Digital%20Twin%20Desktop%20Application/) folder and run the following command:
+
+    npm install
+
+To start the application in development mode run:
+
+    npm start
+
+
