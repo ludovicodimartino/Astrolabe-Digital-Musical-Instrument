@@ -1,6 +1,6 @@
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import * as THREE from 'three';
+import { OrbitControls } from 'orbitControls';
+import { GLTFLoader } from 'GLTFLoader';
 const { ipcRenderer } = require('electron')
 import { showErrorMessage, checkboxSelectorVisibility } from './messages.js'
 

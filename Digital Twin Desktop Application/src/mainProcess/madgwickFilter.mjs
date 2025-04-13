@@ -160,4 +160,4 @@ class Madgwick {
 
 const mf = new Madgwick();
 
-module.exports = { mf };
+export { mf };

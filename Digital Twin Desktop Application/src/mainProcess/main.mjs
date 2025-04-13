@@ -1,9 +1,9 @@
-const {app, BrowserWindow, ipcMain} = require("electron");
-const os = require('os');
-const { UdpOscListen } = require("./listenUdp");
-const { mf } = require("./madgwickFilter")
+import {app, BrowserWindow, ipcMain} from "electron";
+import { UdpOscListen } from "./listenUdp.mjs";
+import { mf } from "./madgwickFilter.mjs";
+import electronSquirrelStartup from "electron-squirrel-startup";
 
-if(require('electron-squirrel-startup')) app.quit();
+if(electronSquirrelStartup) app.quit();
 
 /**
  * The main window of the application

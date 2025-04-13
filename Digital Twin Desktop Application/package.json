@@ -3,7 +3,7 @@
   "productName": "Astrolabe Viewer",
   "version": "1.0.0",
   "description": "Sensor fusion for the Astrolabe project",
-  "main": "src/mainProcess/main.js",
+  "main": "src/mainProcess/main.mjs",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -23,6 +23,7 @@
     "electron": "^33.4.4"
   },
   "dependencies": {
+    "default-gateway": "^7.2.2",
     "electron-squirrel-startup": "^1.0.1",
     "mathjs": "^14.4.0",
     "osc": "^2.4.5"

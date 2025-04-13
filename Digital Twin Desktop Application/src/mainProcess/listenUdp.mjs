@@ -1,7 +1,8 @@
-const dgram = require('node:dgram');
-const os = require('os');
+import dgram from 'node:dgram';
+import os from 'os';
 const server = dgram.createSocket('udp4');
-const osc = require('osc');
+import osc from 'osc';
+import { gateway4sync } from 'default-gateway';
 
 
 /**
@@ -36,11 +37,12 @@ class UdpOscListen extends osc.UDPPort {
    */
   constructor(localAddress, port = 9999) {
     if (!localAddress) {
-      const wifiAddress = UdpOscListen.#getWiFiIPv4();
-      if (!wifiAddress) {
-        throw new Error("No valid WiFi IPv4 address found.");
+      const netAddr = UdpOscListen.#getNetworkIPv4Addr();
+      if (!netAddr) {
+        throw new Error("No valid network IPv4 address found.");
       }
-      localAddress = wifiAddress;
+      console.log("No local address provided. Using network IPv4 address:", netAddr);
+      localAddress = netAddr;
     }
     super({
       localAddress: localAddress,
@@ -63,7 +65,7 @@ class UdpOscListen extends osc.UDPPort {
     this.#resetTimeout();
 
     // Modifying the OSC library to avoid emitting messages for the boundles
-    let modOSC = require("osc/src/osc")
+    let modOSC = import("osc/src/osc.js");
     modOSC.fireBundleEvents = function (port, bundle, timeTag, packetInfo) {
       port.emit("bundle", bundle, timeTag, packetInfo);
       for (var i = 0; i < bundle.packets.length; i++) {
@@ -94,24 +96,40 @@ class UdpOscListen extends osc.UDPPort {
     });
 
     // Start UDP listening
-    this.open();
+    try {
+      this.open();
+    } catch (err) {
+      console.log(err);
+    }
+
   }
 
   /**
- * This method retrieves the IPv4 address of the WiFi interface.
- * @returns {string} The IPv4 address of the WiFi interface.
+ * This method retrieves the IPv4 address of the network interface.
+ * @returns {string} The IPv4 address of the network interface.
  */
-  static #getWiFiIPv4() {
+  static #getNetworkIPv4Addr() {
     const interfaces = os.networkInterfaces();
-
-    for (const iface of Object.values(interfaces)) {
-      for (const info of iface) {
-        if (info.family === 'IPv4' && !info.internal && info.mac !== '00:00:00:00:00:00') {
-          return info.address; // Returns the first valid IPv4
+    try {
+      // Get the default gateway information
+      const { gateway: gatewayAddr, version, int: gatewayInt } = gateway4sync();
+      for (const [name, iface] of Object.entries(interfaces)) {
+        for (const info of iface) {
+          if (
+            info.family === 'IPv4' &&
+            !info.internal &&
+            info.mac !== '00:00:00:00:00:00' &&
+            name === gatewayInt
+          ) {
+            return info.address; // Returns the IPv4 address with a default gateway
+          }
         }
       }
+    } catch (err) {
+      console.error("Error retrieving default gateway:", err);
+      return null;
     }
-    return null; // No valid WiFi IPv4 found
+    return null;
   }
 
   /**
@@ -162,4 +180,4 @@ class UdpOscListen extends osc.UDPPort {
 
 }
 
-exports.UdpOscListen = UdpOscListen;
+export { UdpOscListen };

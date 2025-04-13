@@ -59,6 +59,8 @@ Run the installer on your laptop and the program should start automatically.
 ### Dev version
 You must have node.js installed in your system. You can download it from [here](https://nodejs.org/en).
 
+Clone the repository.
+
 Navigate to the [Digital Twin Desktop Application](./Digital%20Twin%20Desktop%20Application/) folder and run the following command:
 
     npm install
