@@ -104,13 +104,16 @@ udpOscListener.on("OSCBundleReceived", (msg) => {
 /**
  * When a new OSC message containing the encoder information is received
  */
+let radianAngle = 0;
 udpOscListener.on("OSCMessageReceived", (msg) => {
     switch(msg.address){
         case "/encA":
-            mainWindow.webContents.send("alidada:data", msg.args[0]);
+            radianAngle = -(msg.args[0] % 30) * (Math.PI / 15);
+            mainWindow.webContents.send("alidade:data", radianAngle);
             break;
         case "/encB":
-            mainWindow.webContents.send("rete:data", msg.args[0]);
+            radianAngle = -(msg.args[0] % 30) * (Math.PI / 15);
+            mainWindow.webContents.send("rete:data", radianAngle);
             break;
         case "/reset":
             mainWindow.webContents.send("reset");

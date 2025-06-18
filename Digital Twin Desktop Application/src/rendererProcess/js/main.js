@@ -134,12 +134,6 @@ const loadModel = (fileName) => {
       if (modelCount === modelsFileNames.length) {
         animate();
       }
-    },
-    (xhr) => {
-      const progress = (xhr.loaded / xhr.total) * 100;
-    },
-    (error) => {
-      console.error(`Error loading ${fileName}:`, error);
     }
   );
 };
@@ -149,12 +143,12 @@ modelsFileNames.forEach(loadModel);
 
 // Variables to store target rotations for smooth interpolation
 let targetGroupRotation = { x: 0, y: 0, z: 0 };
-let targetAlidadaRotation = 0;
+let targetAlidadeRotation = 0;
 let targetReteRotation = 0;
 
 // Current rotations for interpolation
 let currentGroupQuaternion = new THREE.Quaternion(0, 0, 0, 1);
-let currentAlidadaRotation = 0;
+let currentAlidadeRotation = 0;
 let currentReteRotation = 0;
 
 // Update group rotation with IMU sensor data
@@ -162,21 +156,21 @@ ipcRenderer.on('rotation:data', (event, data) => {
   currentGroupQuaternion.set(-data.y, data.z, -data.x, data.w);
 });
 
-// Update alidada rotation with rotary encoder data
-ipcRenderer.on('alidada:data', (event, data) => {
-  targetAlidadaRotation = -(data % 30) * (Math.PI / 15);
+// Update alidade rotation with rotary encoder data
+ipcRenderer.on('alidade:data', (event, data) => {
+  targetAlidadeRotation = data;
 });
 
 // Update rete rotation with rotary encoder data
 ipcRenderer.on('rete:data', (event, data) => {
-  targetReteRotation = -(data % 30) * (Math.PI / 15);
+  targetReteRotation = data;
 });
 
 // Reset rotation with rotary encoder data
 ipcRenderer.on('reset', (event, data) => {
   console.log('Reset received');
-  currentAlidadaRotation = currentReteRotation = 0;
-  targetAlidadaRotation = targetReteRotation = 0;
+  currentAlidadeRotation = currentReteRotation = 0;
+  targetAlidadeRotation = targetReteRotation = 0;
   modelMeshes['alidada.glb'].rotation.y = 0;
   modelMeshes['rete.glb'].rotation.y = 0;
 });
@@ -204,8 +198,8 @@ const animate = (time) => {
     modelGroup.quaternion.slerp(currentGroupQuaternion, 0.1);
     
     // Smoothly interpolate alidada rotation
-    currentAlidadaRotation = circularLerp(currentAlidadaRotation, targetAlidadaRotation, 0.1, 2 * Math.PI);
-    modelMeshes['alidada.glb'].rotation.y = currentAlidadaRotation;
+    currentAlidadeRotation = circularLerp(currentAlidadeRotation, targetAlidadeRotation, 0.1, 2 * Math.PI);
+    modelMeshes['alidada.glb'].rotation.y = currentAlidadeRotation;
 
     // Smoothly interpolate rete rotation
     currentReteRotation = circularLerp(currentReteRotation, targetReteRotation, 0.1, 2 * Math.PI);
