@@ -53,7 +53,8 @@ For the communication between the microcontroller and the IMU (Adafruit Precisio
     - [Adafruit FXOS8700](https://github.com/adafruit/Adafruit_FXOS8700)
     - [OSC](https://github.com/CNMAT/OSC)
 3.  Write the necessary information in the [secrets.h](./Arduino%20Sketches/ESP32C3_send_IMU_and_encoder_Data_OSC/secrets.h) file to allow the board to access WiFi. If the file doesn't exist create it in the sketch directory.
-4.  Connect the board to the computer, compile and upload the code.
+4. In the Arduino IDE, enable the USB CDC on boot (*Tools -> USB CDC On Boot -> Enabled*).
+5. Connect the board to the computer, compile and upload the code.
 
 ## How to run the Electron App 
 
