@@ -79,17 +79,32 @@ controls.autoRotate = false;
 controls.target = new THREE.Vector3(0, 1, 0);
 controls.update();
 
-// Ground plane
-const groundGeometry = new THREE.PlaneGeometry(20, 20, 32, 32);
-groundGeometry.rotateX(-Math.PI / 2);
-const groundMaterial = new THREE.MeshStandardMaterial({
-  color: 0x555555,
-  side: THREE.DoubleSide
-});
-const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
-groundMesh.castShadow = false;
-groundMesh.receiveShadow = true;
-scene.add(groundMesh);
+/** 
+ * The THREE points representing the stars.
+ */
+let starsObject = null;
+
+// --- Starry background ---
+function addStars(scene, starCount = 1000, radius = 100) {
+  const geometry = new THREE.BufferGeometry();
+  const positions = [];
+  for (let i = 0; i < starCount; i++) {
+    const phi = Math.acos(2 * Math.random() - 1);
+    const theta = 2 * Math.PI * Math.random();
+    const r = radius * (0.8 + 0.2 * Math.random());
+    positions.push(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.sin(phi) * Math.sin(theta),
+      r * Math.cos(phi)
+    );
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7, sizeAttenuation: true });
+  starsObject = new THREE.Points(geometry, material);
+  scene.add(starsObject);
+}
+
+addStars(scene);
 
 
 // Light
@@ -98,6 +113,14 @@ spotLight.position.set(0, 25, 0);
 spotLight.castShadow = true;
 spotLight.shadow.bias = -0.0001;
 scene.add(spotLight);
+
+const sunLight = new THREE.DirectionalLight(0xfff7e0, 1.5); // Warm sunlight color and intensity
+sunLight.position.set(10, 30, 10);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.bias = -0.0001;
+scene.add(sunLight);
 
 // Group to hold models
 const modelGroup = new THREE.Group();
@@ -196,7 +219,7 @@ const animate = (time) => {
 
     // Smoothly interpolate group rotation
     modelGroup.quaternion.slerp(currentGroupQuaternion, 0.1);
-    
+
     // Smoothly interpolate alidada rotation
     currentAlidadeRotation = circularLerp(currentAlidadeRotation, targetAlidadeRotation, 0.1, 2 * Math.PI);
     modelMeshes['alidada.glb'].rotation.y = currentAlidadeRotation;
@@ -204,6 +227,11 @@ const animate = (time) => {
     // Smoothly interpolate rete rotation
     currentReteRotation = circularLerp(currentReteRotation, targetReteRotation, 0.1, 2 * Math.PI);
     modelMeshes['rete.glb'].rotation.y = currentReteRotation;
+
+    // Update the stars' positions when the rete is moved
+    if (starsObject) {
+      starsObject.rotation.y = currentReteRotation;
+    }
 
     // Update controls and render the scene
     controls.update();
@@ -222,4 +250,13 @@ function circularLerp(start, end, t, maxValue) {
 ipcRenderer.on("ctrlMsg", (event, data) => {
   console.log(data);
   showErrorMessage(data.msg, data.type);
-})
+});
+
+// Test the rete rotation using the arrow keys
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft') {
+    targetReteRotation -= Math.PI / 15; // Decrease angle
+  } else if (event.key === 'ArrowRight') {
+    targetReteRotation += Math.PI / 15; // Increase angle
+  }
+});

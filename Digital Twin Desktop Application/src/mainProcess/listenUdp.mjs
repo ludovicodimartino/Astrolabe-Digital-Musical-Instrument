@@ -33,9 +33,9 @@ class UdpOscListen extends osc.UDPPort {
    * Constructs a UdpOscListen instance listening on the specified port.
    * @constructor
    * @param {String} localAddress - The interface local address on which you want to listen.
-   * @param {number} [port=9999] - The port to listen for incoming OSC messages.
+   * @param {number} [port=9000] - The port to listen for incoming OSC messages.
    */
-  constructor(localAddress, port = 9999) {
+  constructor(localAddress, port = 9000) {
     if (!localAddress) {
       const netAddr = UdpOscListen.#getNetworkIPv4Addr();
       if (!netAddr) {
